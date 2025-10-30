@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { TasteflowLogo } from "@/components/tasteflow-logo"
+import { TasteFlowLogo } from "@/components/tasteflow-logo"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { LogOut, Home, Users, Building2, BarChart3, Settings } from "lucide-react"
@@ -71,7 +71,7 @@ export default function AdminDashboardLayout({
         {/* Top Header */}
         <div className="bg-black/10 backdrop-blur-sm border-b border-white/10 px-8 py-4">
           <div className="flex items-center justify-between">
-            <TasteflowLogo className="text-white" />
+            <TasteFlowLogo />
             <div className="flex items-center gap-4">
               <span className="text-white/70 text-sm">Administrador</span>
               <Button
