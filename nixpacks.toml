@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ["dotnet-sdk_8"]
+
+[phases.install]
+cmds = ["dotnet restore Backend/TasteFlow.Api/TasteFlow.Api.csproj"]
+
+[phases.build]
+cmds = ["dotnet publish Backend/TasteFlow.Api/TasteFlow.Api.csproj -c Release -o ./publish"]
+
+[start]
+cmd = "dotnet Backend/TasteFlow.Api/publish/TasteFlow.Api.dll"
+
