@@ -19,12 +19,12 @@ COPY . .
 
 # Build e publicar
 WORKDIR /src/TasteFlow.Api
-RUN dotnet publish -c Release -o /app/publish
+RUN dotnet publish -c Release -o /app
 
 # Imagem final
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
-COPY --from=build /app/publish .
+COPY --from=build /app .
 
 # Expor porta
 EXPOSE 8080
