@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TasteFlow.Api.Controllers.Base;
 using TasteFlow.Contracts.ProductAlternative.Request;
+using TasteFlow.Application.ProductAlternative.Queries;
 
 namespace TasteFlow.Api.Controllers.ProductAlternative
 {
@@ -28,7 +29,7 @@ namespace TasteFlow.Api.Controllers.ProductAlternative
         {
             try
             {
-                var query = _mapper.Map<>(request);
+                var query = _mapper.Map<GetAllProductAlternativesByProductIdQuery>(request);
                 query.EnterpriseId = EnterpriseId.Value;
 
                 var result = await _mediator.Send(query);
