@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using TasteFlow.Domain.Entities;
 using TasteFlow.Domain.Interfaces;
 using TasteFlow.Domain.Interfaces.Common;
-using TasteFlow.Infrastructure.Log;
+// using TasteFlow.Infrastructure.Log;
 using TasteFlow.Infrastructure.Repositories.Base;
 
 namespace TasteFlow.Infrastructure.Repositories

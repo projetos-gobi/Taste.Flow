@@ -19,7 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TasteFlow.Domain\TasteFlow.Domain.csproj" />
-    <ProjectReference Include="..\TasteFlow.Infrastructure.Log\TasteFlow.Infrastructure.Log.csproj" />
     <ProjectReference Include="..\TasteFlow.Shared\TasteFlow.Shared.csproj" />
   </ItemGroup>
 
