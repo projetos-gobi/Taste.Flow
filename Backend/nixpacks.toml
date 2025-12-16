@@ -8,5 +8,4 @@ cmds = ["dotnet restore TasteFlow.Api/TasteFlow.Api.csproj"]
 cmds = ["dotnet publish TasteFlow.Api/TasteFlow.Api.csproj -c Release -o ./publish"]
 
 [start]
-cmd = "dotnet TasteFlow.Api/publish/TasteFlow.Api.dll"
-
+cmd = "dotnet ./publish/TasteFlow.Api.dll"
