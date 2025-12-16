@@ -40,7 +40,7 @@ namespace TasteFlow.Infrastructure.Startup
             services.AddSingleton<ITokenGenerator, TokenGenerator>();
 
             services.AddScoped(typeof(IRepository<>), typeof(BaseRepository<>));
-            services.AddScoped<IEventLogger, EventLogger>(provider => new EventLogger(provider.GetService<IConfiguration>()));
+            // services.AddScoped<IEventLogger, EventLogger>(provider => new EventLogger(provider.GetService<IConfiguration>()));
 
             //AWS
             var awsSettings = new AwsSettings();
