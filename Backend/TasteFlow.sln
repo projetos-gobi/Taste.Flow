@@ -1,0 +1,84 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35219.272
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2.Application", "2.Application", "{152201FB-4C22-4702-816F-CC918E4D6206}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "3.Domain", "3.Domain", "{4A0FF8EE-A3A0-4EA0-A32E-FCA73D04EF6B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "1.Presentation", "1.Presentation", "{B1C53D79-2334-40D1-909E-8D1C5BD7ABCC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "4.Infrastructure", "4.Infrastructure", "{798D9CF4-CF62-4501-8837-5A03B8DA392E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TasteFlow.Contracts", "TasteFlow.Contracts\TasteFlow.Contracts.csproj", "{4CC15F83-1C20-405F-9051-F876A3E96407}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TasteFlow.Api", "TasteFlow.Api\TasteFlow.Api.csproj", "{4C69D2F0-3ADF-44C2-A40A-649124A84E25}"
+	ProjectSection(ProjectDependencies) = postProject
+		{19F169FF-AD55-4DF4-8F7A-5B6560EAFE3B} = {19F169FF-AD55-4DF4-8F7A-5B6560EAFE3B}
+		{78122BCC-FACB-45FF-83D2-79B399FAAE09} = {78122BCC-FACB-45FF-83D2-79B399FAAE09}
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TasteFlow.Application", "TasteFlow.Application\TasteFlow.Application.csproj", "{19F169FF-AD55-4DF4-8F7A-5B6560EAFE3B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TasteFlow.Domain", "TasteFlow.Domain\TasteFlow.Domain.csproj", "{571D1A27-5539-4CD7-A7A8-4DC1FA23293F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TasteFlow.Infrastructure", "TasteFlow.Infrastructure\TasteFlow.Infrastructure.csproj", "{78122BCC-FACB-45FF-83D2-79B399FAAE09}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "5.Shared", "5.Shared", "{09BE0990-B460-4205-9469-BD8A0EFA0C5D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TasteFlow.Shared", "TasteFlow.Shared\TasteFlow.Shared.csproj", "{61EF667F-97A6-40DA-B586-93C198325EF0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TasteFlow.Infrastructure.Log", "TasteFlow.Infrastructure.Log\TasteFlow.Infrastructure.Log.csproj", "{DCCE9E25-B99C-4D5A-AB4D-1BFD9A2101BA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4CC15F83-1C20-405F-9051-F876A3E96407}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4CC15F83-1C20-405F-9051-F876A3E96407}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4CC15F83-1C20-405F-9051-F876A3E96407}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4CC15F83-1C20-405F-9051-F876A3E96407}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C69D2F0-3ADF-44C2-A40A-649124A84E25}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C69D2F0-3ADF-44C2-A40A-649124A84E25}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C69D2F0-3ADF-44C2-A40A-649124A84E25}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C69D2F0-3ADF-44C2-A40A-649124A84E25}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19F169FF-AD55-4DF4-8F7A-5B6560EAFE3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19F169FF-AD55-4DF4-8F7A-5B6560EAFE3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19F169FF-AD55-4DF4-8F7A-5B6560EAFE3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19F169FF-AD55-4DF4-8F7A-5B6560EAFE3B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{571D1A27-5539-4CD7-A7A8-4DC1FA23293F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{571D1A27-5539-4CD7-A7A8-4DC1FA23293F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{571D1A27-5539-4CD7-A7A8-4DC1FA23293F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{571D1A27-5539-4CD7-A7A8-4DC1FA23293F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78122BCC-FACB-45FF-83D2-79B399FAAE09}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78122BCC-FACB-45FF-83D2-79B399FAAE09}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78122BCC-FACB-45FF-83D2-79B399FAAE09}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78122BCC-FACB-45FF-83D2-79B399FAAE09}.Release|Any CPU.Build.0 = Release|Any CPU
+		{61EF667F-97A6-40DA-B586-93C198325EF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61EF667F-97A6-40DA-B586-93C198325EF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61EF667F-97A6-40DA-B586-93C198325EF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61EF667F-97A6-40DA-B586-93C198325EF0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCCE9E25-B99C-4D5A-AB4D-1BFD9A2101BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCCE9E25-B99C-4D5A-AB4D-1BFD9A2101BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCCE9E25-B99C-4D5A-AB4D-1BFD9A2101BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCCE9E25-B99C-4D5A-AB4D-1BFD9A2101BA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{4CC15F83-1C20-405F-9051-F876A3E96407} = {B1C53D79-2334-40D1-909E-8D1C5BD7ABCC}
+		{4C69D2F0-3ADF-44C2-A40A-649124A84E25} = {B1C53D79-2334-40D1-909E-8D1C5BD7ABCC}
+		{19F169FF-AD55-4DF4-8F7A-5B6560EAFE3B} = {152201FB-4C22-4702-816F-CC918E4D6206}
+		{571D1A27-5539-4CD7-A7A8-4DC1FA23293F} = {4A0FF8EE-A3A0-4EA0-A32E-FCA73D04EF6B}
+		{78122BCC-FACB-45FF-83D2-79B399FAAE09} = {798D9CF4-CF62-4501-8837-5A03B8DA392E}
+		{61EF667F-97A6-40DA-B586-93C198325EF0} = {09BE0990-B460-4205-9469-BD8A0EFA0C5D}
+		{DCCE9E25-B99C-4D5A-AB4D-1BFD9A2101BA} = {798D9CF4-CF62-4501-8837-5A03B8DA392E}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4E860E7C-839A-4091-BEBB-841327D76299}
+	EndGlobalSection
+EndGlobal

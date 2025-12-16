@@ -1,0 +1,16 @@
+﻿namespace TasteFlow.Domain.Entities
+{
+    public class ProductCategoryType
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } 
+        public DateTime CreatedOn { get; set; }
+        public DateTime? ModifiedOn { get; set; }
+        public DateTime? DeletedOn { get; set; }
+        public Guid CreatedBy { get; set; }
+        public Guid? ModifiedBy { get; set; }
+        public Guid? DeletedBy { get; set; }
+        public bool IsDeleted { get; set; }
+        public bool IsActive { get; set; }
+    }
+}

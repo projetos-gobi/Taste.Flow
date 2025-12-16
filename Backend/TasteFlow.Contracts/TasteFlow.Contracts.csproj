@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Brand\Response\" />
+    <Folder Include="CategoryType\Response\" />
+    <Folder Include="Category\Response\" />
+    <Folder Include="EnterpriseAddress\Response\" />
+    <Folder Include="EnterpriseContact\Response\" />
+    <Folder Include="Enterprise\Response\" />
+    <Folder Include="Item\Response\" />
+    <Folder Include="Merchandise\Response\" />
+    <Folder Include="PaymentType\Response\" />
+    <Folder Include="ProductComposition\Response\" />
+    <Folder Include="ProductIntermediateComposition\Response\" />
+    <Folder Include="ProductIntermediate\Response\" />
+    <Folder Include="ProductType\Response\" />
+    <Folder Include="Product\Response\" />
+    <Folder Include="StockEntryAttachment\Response\" />
+    <Folder Include="StockEntryItem\Response\" />
+    <Folder Include="StockEntry\Response\" />
+    <Folder Include="SubCategory\Response\" />
+    <Folder Include="Supplier\Response\" />
+    <Folder Include="Unit\Response\" />
+    <Folder Include="Users\Response\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TasteFlow.Application\TasteFlow.Application.csproj" />
+  </ItemGroup>
+
+</Project>

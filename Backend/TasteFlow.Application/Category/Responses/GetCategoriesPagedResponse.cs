@@ -1,0 +1,17 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace TasteFlow.Application.Category.Responses
+{
+    public record GetCategoriesPagedResponse
+    {
+        public Guid Id { get; set; }
+        public Guid EnterpriseId { get; set; }
+        public Guid CategoryTypeId { get; set; }
+        public string Name { get; set; }
+        public string CategoryTypeName { get; set; }
+    }
+}

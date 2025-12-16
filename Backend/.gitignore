@@ -1,0 +1,51 @@
+# Arquivos e pastas do Visual Studio
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Diretórios de build
+bin/
+obj/
+out/
+
+# Arquivos de logs
+*.log
+*.tlog
+*.log2
+
+# Arquivos de lock e pacotes
+project.lock.json
+project.fragment.lock.json
+*.pidb
+*.cache
+*.pdb
+
+# Arquivos de pacotes e nuget
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+# Arquivos de backup e temporários
+~$*
+*.tmp
+*.bak
+*.swp
+
+# Arquivos de publicação
+publish/
+publishOutput/
+
+# Configurações locais
+appsettings.Development.json
+appsettings.Local.json
+
+# Outros arquivos e pastas desnecessários
+*.dbmdl
+*.dbml
+TestResults/
+*.sqlproj.user

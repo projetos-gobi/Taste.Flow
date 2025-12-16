@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="15.0.0" />
+    <PackageReference Include="MediatR" Version="13.0.0" />
+    <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="11.1.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.7" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TasteFlow.Domain\TasteFlow.Domain.csproj" />
+    <ProjectReference Include="..\TasteFlow.Shared\TasteFlow.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="PaymentTerm\Commands\" />
+    <Folder Include="PaymentType\Commands\" />
+    <Folder Include="ProductComposition\Commands\" />
+    <Folder Include="ProductComposition\Handlers\" />
+    <Folder Include="ProductComposition\Queries\" />
+    <Folder Include="ProductIntermediateComposition\Commands\" />
+    <Folder Include="ProductIntermediateComposition\Handlers\" />
+    <Folder Include="ProductIntermediateComposition\Queries\" />
+    <Folder Include="StockEntryAttachment\Commands\" />
+    <Folder Include="StockEntryItem\Commands\" />
+    <Folder Include="StockEntryItem\Handlers\" />
+    <Folder Include="StockEntryItem\Queries\" />
+    <Folder Include="SupplierPaymentDetail\Commands\" />
+    <Folder Include="SupplierPaymentDetail\Handlers\" />
+    <Folder Include="SupplierPaymentDetail\Queries\" />
+    <Folder Include="SupplierPaymentType\Commands\" />
+    <Folder Include="SupplierPaymentType\Handlers\" />
+    <Folder Include="SupplierPaymentType\Queries\" />
+  </ItemGroup>
+
+</Project>
