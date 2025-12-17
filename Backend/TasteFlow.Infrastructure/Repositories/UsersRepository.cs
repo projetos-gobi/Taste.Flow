@@ -57,44 +57,52 @@ namespace TasteFlow.Infrastructure.Repositories
         {
             try
             {
-                var result = await DbSet
-                    .Include(x => x.AccessProfile)
-                    .Include(x => x.UserEnterprises)
-                    .Where(x => x.EmailAddress == email && x.IsActive && !x.IsDeleted)
-                    .Select(x => new Users()
-                    {
-                        Id = x.Id,
-                        EmailAddress = x.EmailAddress,
-                        PasswordHash = x.PasswordHash,
-                        PasswordSalt = x.PasswordSalt,
-                        Name = x.Name,
-                        AccessProfileId = x.AccessProfileId,
-                        MustChangePassword = x.MustChangePassword,
-                        UserEnterprises = x.UserEnterprises.Where(ue => ue.IsActive && !ue.IsDeleted).Select(ue => new UserEnterprise()
-                        {
-                            Id = ue.Id,
-                            EnterpriseId = ue.EnterpriseId,
-                            LicenseManagement = ue.LicenseManagement != null ? new LicenseManagement()
-                            {
-                                Id = ue.LicenseManagement.Id,
-                                ExpirationDate = ue.LicenseManagement.ExpirationDate,
-                                IsIndefinite = ue.LicenseManagement.IsIndefinite,
-                                IsActive = ue.LicenseManagement.IsActive,
-                            } : null
-                        }).ToList(),
-                        UserPasswordManagements = x.UserPasswordManagements.Where(upm => upm.IsActive && !upm.IsDeleted).Select(upm => new UserPasswordManagement()
-                        {
-                            Id = upm.Id,
-                            Code = upm.Code,
-                        }).ToList()
-                    })
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync();
+                Console.WriteLine($"[AUTH] Using ADO.NET for login: {email}");
+                
+                var connectionString = _context.Database.GetConnectionString();
+                using (var connection = new Npgsql.NpgsqlConnection(connectionString))
+                {
+                    await connection.OpenAsync();
+                    Console.WriteLine($"[AUTH] Connection opened!");
 
-                return result;
+                    // Buscar usuário
+                    var command = new Npgsql.NpgsqlCommand(
+                        @"SELECT ""Id"", ""EmailAddress"", ""PasswordHash"", ""PasswordSalt"", ""Name"", ""AccessProfileId"", ""MustChangePassword""
+                          FROM ""Users"" 
+                          WHERE ""EmailAddress"" = @email AND ""IsActive"" AND NOT ""IsDeleted""
+                          LIMIT 1", 
+                        connection);
+                    
+                    command.Parameters.AddWithValue("email", email);
+                    command.CommandTimeout = 10;
+
+                    Users user = null;
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            user = new Users
+                            {
+                                Id = reader.GetGuid(0),
+                                EmailAddress = reader.GetString(1),
+                                PasswordHash = reader.GetString(2),
+                                PasswordSalt = reader.GetString(3),
+                                Name = reader.GetString(4),
+                                AccessProfileId = reader.GetGuid(5),
+                                MustChangePassword = reader.GetBoolean(6),
+                                UserEnterprises = new List<UserEnterprise>(),
+                                UserPasswordManagements = new List<UserPasswordManagement>()
+                            };
+                        }
+                    }
+
+                    Console.WriteLine($"[AUTH] User found: {user != null}");
+                    return user;
+                }
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[AUTH ERROR] {ex.Message}");
                 var message = $"Ocorreu um erro durante a busca de um usuário no banco de dados: E-mail: {email}";
                 //_eventLogger.Log(LogTypeEnum.Error, ex, message);
 
