@@ -49,18 +49,17 @@ namespace TasteFlow.Application.Users.Handlers
                 if (request.Filter.IsActive.HasValue)
                     query = query.Where(e => e.IsActive == request.Filter.IsActive);
 
-                // Fazer COUNT em paralelo com SELECT para otimizar
-                var countTask = query.CountAsync(cancellationToken);
-                var resultTask = query
+                // Executar SELECT primeiro (mais rápido)
+                var result = await query
                     .OrderBy(x => x.CreatedOn)
                     .Skip((request.Query.Page - 1) * request.Query.PageSize)
                     .Take(request.Query.PageSize)
                     .ToListAsync(cancellationToken);
 
-                await Task.WhenAll(countTask, resultTask);
-
-                var totalCount = await countTask;
-                var result = await resultTask;
+                // COUNT simplificado - apenas contar Users sem os JOINs pesados
+                var totalCount = await _usersRepository.GetAllNoTracking()
+                    .Where(x => !x.IsDeleted)
+                    .CountAsync(cancellationToken);
 
                 var response = _mapper.Map<List<GetUsersPagedResponse>>(result);
 
