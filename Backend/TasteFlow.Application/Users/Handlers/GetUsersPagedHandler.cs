@@ -41,8 +41,20 @@ namespace TasteFlow.Application.Users.Handlers
 
                 Console.WriteLine($"[HANDLER] SELECT returned {result.Count} users");
 
-                Console.WriteLine("[HANDLER] Mapping results...");
-                var response = _mapper.Map<List<GetUsersPagedResponse>>(result);
+                // Mapeamento manual - mais rápido e sem problemas do AutoMapper
+                Console.WriteLine("[HANDLER] Mapping results manually...");
+                var response = result.Select(u => new GetUsersPagedResponse
+                {
+                    Id = u.Id,
+                    Name = u.Name ?? "",
+                    EmailAddress = u.EmailAddress ?? "",
+                    AccessProfileId = u.AccessProfileId,
+                    EnterpriseName = "", // Não carregamos ainda
+                    LicenseName = "", // Não carregamos ainda
+                    Contact = "", // Não carregamos ainda
+                    AccessProfileName = "", // Não carregamos ainda
+                    IsActive = true // Assumir ativo por enquanto
+                }).ToList();
 
                 Console.WriteLine($"[HANDLER] Mapped {response.Count} items");
 

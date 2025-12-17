@@ -293,20 +293,20 @@ namespace TasteFlow.Infrastructure.Repositories
                     totalCount = Convert.ToInt32(await countCommand.ExecuteScalarAsync());
                     Console.WriteLine($"[REPO] Total count: {totalCount}");
 
-                    // SEGUNDO: Fazer SELECT na mesma conexão
+                    // SEGUNDO: Fazer SELECT na mesma conexão - QUERY ULTRA SIMPLES para testar
                     var offset = (page - 1) * pageSize;
+                    // REMOVER ORDER BY e simplificar ao máximo
                     var selectSql = @"
                         SELECT ""Id"", ""Name"", ""EmailAddress"" 
                         FROM ""Users"" 
                         WHERE NOT ""IsDeleted"" 
-                        ORDER BY ""Name"" 
                         LIMIT @pageSize OFFSET @offset";
 
-                    Console.WriteLine($"[REPO] Executing SELECT...");
+                    Console.WriteLine($"[REPO] Executing SELECT (simplified, no ORDER BY)...");
                     var selectCommand = new Npgsql.NpgsqlCommand(selectSql, connection);
                     selectCommand.Parameters.AddWithValue("pageSize", pageSize);
                     selectCommand.Parameters.AddWithValue("offset", offset);
-                    selectCommand.CommandTimeout = 30;
+                    selectCommand.CommandTimeout = 10; // Reduzir timeout para falhar mais rápido se houver problema
 
                     using (var reader = await selectCommand.ExecuteReaderAsync())
                     {
@@ -334,10 +334,58 @@ namespace TasteFlow.Infrastructure.Repositories
             return (users, totalCount);
         }
 
-        // Método mantido para compatibilidade - delega para o novo método
+        // Método SEM COUNT - apenas SELECT rápido
         public async Task<List<Users>> GetUsersPagedDirectAsync(int page, int pageSize, object filter = null)
         {
-            var (users, _) = await GetUsersPagedWithCountDirectAsync(page, pageSize, filter);
+            var users = new List<Users>();
+
+            try
+            {
+                Console.WriteLine($"[REPO] Starting GetUsersPagedDirectAsync (NO COUNT) - page: {page}, pageSize: {pageSize}");
+
+                using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
+                {
+                    Console.WriteLine($"[REPO] Opening connection...");
+                    await connection.OpenAsync();
+                    Console.WriteLine($"[REPO] Connection opened!");
+
+                    // APENAS SELECT - SEM COUNT
+                    var offset = (page - 1) * pageSize;
+                    var selectSql = @"
+                        SELECT ""Id"", ""Name"", ""EmailAddress"" 
+                        FROM ""Users"" 
+                        WHERE NOT ""IsDeleted"" 
+                        LIMIT @pageSize OFFSET @offset";
+
+                    Console.WriteLine($"[REPO] Executing SELECT (NO COUNT, NO ORDER BY)...");
+                    var selectCommand = new Npgsql.NpgsqlCommand(selectSql, connection);
+                    selectCommand.Parameters.AddWithValue("pageSize", pageSize);
+                    selectCommand.Parameters.AddWithValue("offset", offset);
+                    selectCommand.CommandTimeout = 10;
+
+                    using (var reader = await selectCommand.ExecuteReaderAsync())
+                    {
+                        Console.WriteLine($"[REPO] Reading results...");
+                        while (await reader.ReadAsync())
+                        {
+                            users.Add(new Users
+                            {
+                                Id = reader.GetGuid(0),
+                                Name = reader.GetString(1),
+                                EmailAddress = reader.GetString(2)
+                            });
+                        }
+                    }
+                    Console.WriteLine($"[REPO] Found {users.Count} users!");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[REPO ERROR] {ex.Message}");
+                Console.WriteLine($"[REPO ERROR] Stack: {ex.StackTrace}");
+                throw;
+            }
+
             return users;
         }
 
