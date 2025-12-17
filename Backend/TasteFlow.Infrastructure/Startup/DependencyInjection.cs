@@ -40,21 +40,21 @@ namespace TasteFlow.Infrastructure.Startup
             services.AddSingleton<ITokenGenerator, TokenGenerator>();
 
             services.AddScoped(typeof(IRepository<>), typeof(BaseRepository<>));
-            // services.AddScoped<IEventLogger, EventLogger>(provider => new EventLogger(provider.GetService<IConfiguration>()));
+            services.AddScoped<IEventLogger, TasteFlow.Infrastructure.Services.DummyEventLogger>();
 
-            //AWS
-            var awsSettings = new AwsSettings();
-            configuration.GetSection(AwsSettings.SectionName).Bind(awsSettings);
+            //AWS - Temporariamente desabilitado (adicionar credenciais quando necessário)
+            // var awsSettings = new AwsSettings();
+            // configuration.GetSection(AwsSettings.SectionName).Bind(awsSettings);
 
-            var credentials = new BasicAWSCredentials(awsSettings.AccessKey, awsSettings.SecretKey);
-            var awsOptions = new Amazon.Extensions.NETCore.Setup.AWSOptions
-            {
-                Credentials = credentials,
-                Region = RegionEndpoint.GetBySystemName(awsSettings.Region)
-            };
+            // var credentials = new BasicAWSCredentials(awsSettings.AccessKey, awsSettings.SecretKey);
+            // var awsOptions = new Amazon.Extensions.NETCore.Setup.AWSOptions
+            // {
+            //     Credentials = credentials,
+            //     Region = RegionEndpoint.GetBySystemName(awsSettings.Region)
+            // };
 
-            services.AddDefaultAWSOptions(awsOptions);
-            services.AddAWSService<IAmazonS3>();
+            // services.AddDefaultAWSOptions(awsOptions);
+            // services.AddAWSService<IAmazonS3>();
 
             //Repositories
             services.AddScoped<IAccessProfileRepository, AccessProfileRepository>();
