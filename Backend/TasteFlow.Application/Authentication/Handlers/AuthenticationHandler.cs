@@ -34,7 +34,10 @@ namespace TasteFlow.Application.Authentication.Handlers
         {
 			try
 			{
+                var swRepo = Stopwatch.StartNew();
                 var result = await _usersRepository.GetAuthenticatedAccountAsync(request.Email.Value, request.Password.Value);
+                swRepo.Stop();
+                Activity.Current?.SetTag("tf_auth_repo_total", swRepo.Elapsed.TotalMilliseconds);
                 
                 if (result == null)
                 {

@@ -67,11 +67,13 @@ namespace TasteFlow.Infrastructure.Repositories
             var normalizedEmail = (email ?? string.Empty).Trim().ToLowerInvariant();
             const int maxRetries = 2;
             var delayMs = 100;
+            var totalRetryDelayMs = 0;
 
             Exception lastEx = null;
 
             for (var attempt = 1; attempt <= maxRetries; attempt++)
             {
+                var swAttempt = Stopwatch.StartNew();
                 try
                 {
                     var swOpen = Stopwatch.StartNew();
@@ -87,7 +89,7 @@ namespace TasteFlow.Infrastructure.Repositories
                         connection);
 
                     command.Parameters.AddWithValue("email", normalizedEmail);
-                    command.CommandTimeout = 15;
+                    command.CommandTimeout = 5; // não deixar login "pendurar" por muitos segundos
 
                     Users user = null;
                     var swQuery = Stopwatch.StartNew();
@@ -123,16 +125,31 @@ namespace TasteFlow.Infrastructure.Repositories
                 catch (Exception ex) when (attempt < maxRetries && IsTransientDbException(ex))
                 {
                     lastEx = ex;
+                    swAttempt.Stop();
+                    System.Diagnostics.Activity.Current?.SetTag($"tf_auth_attempt{attempt}_ms", swAttempt.Elapsed.TotalMilliseconds);
+
+                    totalRetryDelayMs += delayMs;
                     await Task.Delay(delayMs);
                     delayMs *= 2;
                 }
                 catch (Exception ex)
                 {
                     lastEx = ex;
+                    swAttempt.Stop();
+                    System.Diagnostics.Activity.Current?.SetTag($"tf_auth_attempt{attempt}_ms", swAttempt.Elapsed.TotalMilliseconds);
                     break;
+                }
+                finally
+                {
+                    if (swAttempt.IsRunning)
+                    {
+                        swAttempt.Stop();
+                        System.Diagnostics.Activity.Current?.SetTag($"tf_auth_attempt{attempt}_ms", swAttempt.Elapsed.TotalMilliseconds);
+                    }
                 }
             }
 
+            System.Diagnostics.Activity.Current?.SetTag("tf_auth_retry_delay", totalRetryDelayMs);
             throw lastEx ?? new Exception("Falha ao autenticar usuário (erro desconhecido).");
         }
 
