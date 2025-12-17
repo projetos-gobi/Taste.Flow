@@ -64,8 +64,18 @@ namespace TasteFlow.Application.Authentication.Handlers
                 }
 
                 Console.WriteLine("[DEBUG HANDLER] Creating refresh token...");
-                var refreshToken = await _userRefreshTokenRepository.CreateUserRefreshTokenAsync(result.Id);
-                Console.WriteLine($"[DEBUG HANDLER] Refresh token created: {refreshToken?.RefreshToken?.Substring(0, 10)}...");
+                Domain.Entities.UserRefreshToken refreshToken = null;
+                try
+                {
+                    refreshToken = await _userRefreshTokenRepository.CreateUserRefreshTokenAsync(result.Id);
+                    Console.WriteLine($"[DEBUG HANDLER] Refresh token created: {refreshToken?.RefreshToken?.Substring(0, 10)}...");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[DEBUG HANDLER] REFRESH TOKEN ERROR! {ex.Message}");
+                    Console.WriteLine($"[DEBUG HANDLER] Stack: {ex.StackTrace}");
+                    throw;
+                }
 
                 Console.WriteLine("[DEBUG HANDLER] Generating JWT token...");
                 var token = _tokenGenerator.GenerateToken(result);
