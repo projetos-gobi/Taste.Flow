@@ -49,13 +49,18 @@ namespace TasteFlow.Application.Users.Handlers
                 if (request.Filter.IsActive.HasValue)
                     query = query.Where(e => e.IsActive == request.Filter.IsActive);
 
-                var result = await query
+                // Fazer COUNT em paralelo com SELECT para otimizar
+                var countTask = query.CountAsync(cancellationToken);
+                var resultTask = query
                     .OrderBy(x => x.CreatedOn)
                     .Skip((request.Query.Page - 1) * request.Query.PageSize)
                     .Take(request.Query.PageSize)
                     .ToListAsync(cancellationToken);
 
-                var totalCount = await query.CountAsync(cancellationToken);
+                await Task.WhenAll(countTask, resultTask);
+
+                var totalCount = await countTask;
+                var result = await resultTask;
 
                 var response = _mapper.Map<List<GetUsersPagedResponse>>(result);
 
