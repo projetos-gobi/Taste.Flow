@@ -118,7 +118,7 @@ namespace TasteFlow.Api.Controllers.Authentication
             }
         }
 
-        [Authorize]
+        // REMOVIDO [Authorize] - refresh token não precisa de autenticação, ele valida o refresh token internamente
         [HttpPost("refresh-token")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
