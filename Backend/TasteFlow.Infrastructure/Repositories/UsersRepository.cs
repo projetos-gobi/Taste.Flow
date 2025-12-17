@@ -111,43 +111,52 @@ namespace TasteFlow.Infrastructure.Repositories
                         return null;
                     }
 
-                    // Carregar UserEnterprises com LicenseManagement - query simples e direta
-                    Console.WriteLine($"[AUTH] Loading UserEnterprises for user: {user.Id}");
-                    var userEnterprisesSql = @"
-                        SELECT 
-                            ue.""Id"", 
-                            ue.""LicenseManagementId"", 
-                            COALESCE(lm.""IsActive"", false) AS LicenseIsActive,
-                            COALESCE(lm.""IsIndefinite"", false) AS LicenseIsIndefinite,
-                            COALESCE(lm.""ExpirationDate"", '1970-01-01'::timestamp) AS ExpirationDate
-                        FROM ""UserEnterprise"" ue
-                        LEFT JOIN ""LicenseManagement"" lm ON ue.""LicenseManagementId"" = lm.""Id"" AND NOT lm.""IsDeleted""
-                        WHERE ue.""UserId"" = @userId AND ue.""IsActive"" AND NOT ue.""IsDeleted""";
-
-                    var userEnterprisesCommand = new Npgsql.NpgsqlCommand(userEnterprisesSql, connection);
-                    userEnterprisesCommand.Parameters.AddWithValue("userId", user.Id);
-                    userEnterprisesCommand.CommandTimeout = 10;
-
+                    // Carregar UserEnterprises APENAS se necessário - com timeout curto e tratamento de erro
                     user.UserEnterprises = new List<UserEnterprise>();
-                    using (var reader = await userEnterprisesCommand.ExecuteReaderAsync())
+                    try
                     {
-                        while (await reader.ReadAsync())
+                        Console.WriteLine($"[AUTH] Loading UserEnterprises for user: {user.Id}");
+                        var userEnterprisesSql = @"
+                            SELECT 
+                                ue.""Id"", 
+                                ue.""LicenseManagementId"", 
+                                COALESCE(lm.""IsActive"", false) AS LicenseIsActive,
+                                COALESCE(lm.""IsIndefinite"", false) AS LicenseIsIndefinite,
+                                COALESCE(lm.""ExpirationDate"", '1970-01-01'::timestamp) AS ExpirationDate
+                            FROM ""UserEnterprise"" ue
+                            LEFT JOIN ""LicenseManagement"" lm ON ue.""LicenseManagementId"" = lm.""Id"" AND NOT lm.""IsDeleted""
+                            WHERE ue.""UserId"" = @userId AND ue.""IsActive"" AND NOT ue.""IsDeleted""";
+
+                        var userEnterprisesCommand = new Npgsql.NpgsqlCommand(userEnterprisesSql, connection);
+                        userEnterprisesCommand.Parameters.AddWithValue("userId", user.Id);
+                        userEnterprisesCommand.CommandTimeout = 3; // Timeout MUITO curto - 3 segundos
+
+                        using (var reader = await userEnterprisesCommand.ExecuteReaderAsync())
                         {
-                            var licenseManagementId = reader.IsDBNull(1) ? (Guid?)null : reader.GetGuid(1);
-                            
-                            user.UserEnterprises.Add(new UserEnterprise
+                            while (await reader.ReadAsync())
                             {
-                                Id = reader.GetGuid(0),
-                                LicenseManagementId = licenseManagementId,
-                                LicenseManagement = licenseManagementId.HasValue ? new LicenseManagement
+                                var licenseManagementId = reader.IsDBNull(1) ? (Guid?)null : reader.GetGuid(1);
+                                
+                                user.UserEnterprises.Add(new UserEnterprise
                                 {
-                                    Id = licenseManagementId.Value,
-                                    IsActive = reader.GetBoolean(2),
-                                    IsIndefinite = reader.GetBoolean(3),
-                                    ExpirationDate = reader.GetDateTime(4)
-                                } : null
-                            });
+                                    Id = reader.GetGuid(0),
+                                    LicenseManagementId = licenseManagementId,
+                                    LicenseManagement = licenseManagementId.HasValue ? new LicenseManagement
+                                    {
+                                        Id = licenseManagementId.Value,
+                                        IsActive = reader.GetBoolean(2),
+                                        IsIndefinite = reader.GetBoolean(3),
+                                        ExpirationDate = reader.GetDateTime(4)
+                                    } : null
+                                });
+                            }
                         }
+                        Console.WriteLine($"[AUTH] UserEnterprises loaded: {user.UserEnterprises.Count}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[AUTH] UserEnterprises load failed (continuing): {ex.Message}");
+                        // Continuar sem UserEnterprises - não é crítico para login básico
                     }
 
                     Console.WriteLine($"[AUTH] User found: {user != null}, UserEnterprises: {user.UserEnterprises.Count}");

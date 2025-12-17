@@ -40,10 +40,17 @@ namespace TasteFlow.Application.Authentication.Handlers
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.UserNotFound, "Usuário não encontrado.");
                 }
                  
-                if (result.AccessProfileId == AccessProfileEnum.User.Id && !result.UserEnterprises.Any(ue => ue.LicenseManagement != null 
-                && ue.LicenseManagement.IsActive && (ue.LicenseManagement.IsIndefinite || ue.LicenseManagement.ExpirationDate >= DateTime.UtcNow)))
+                // Validar licença APENAS para usuários normais (não admin) E se UserEnterprises foi carregado
+                // Se UserEnterprises não foi carregado (timeout/erro), permitir login para não bloquear
+                if (result.AccessProfileId == AccessProfileEnum.User.Id && result.UserEnterprises != null && result.UserEnterprises.Any())
                 {
-                    return AuthenticationResult.Empty(AuthenticationStatusEnum.InvalidCredentials, "Credenciais inválidas.");
+                    var hasValidLicense = result.UserEnterprises.Any(ue => ue.LicenseManagement != null 
+                        && ue.LicenseManagement.IsActive && (ue.LicenseManagement.IsIndefinite || ue.LicenseManagement.ExpirationDate >= DateTime.UtcNow));
+                    
+                    if (!hasValidLicense)
+                    {
+                        return AuthenticationResult.Empty(AuthenticationStatusEnum.InvalidCredentials, "Credenciais inválidas.");
+                    }
                 }
 
                 string passwordHash = request.Password.Value.ToSha256Hash(result.PasswordSalt);
