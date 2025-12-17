@@ -33,23 +33,33 @@ namespace TasteFlow.Application.Authentication.Handlers
         {
 			try
 			{
+                Console.WriteLine($"[DEBUG HANDLER] Looking for user with email: {request.Email.Value}");
                 var result = await _usersRepository.GetAuthenticatedAccountAsync(request.Email.Value, request.Password.Value);
 
                 if (result == null)
                 {
+                    Console.WriteLine("[DEBUG HANDLER] User NOT FOUND in database!");
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.UserNotFound, "Usuário não encontrado.");
                 }
+                
+                Console.WriteLine($"[DEBUG HANDLER] User FOUND! ID: {result.Id}, Email: {result.EmailAddress}");
+                Console.WriteLine($"[DEBUG HANDLER] Salt from DB: {result.PasswordSalt}");
+                Console.WriteLine($"[DEBUG HANDLER] Hash from DB: {result.PasswordHash}");
                  
                 if (result.AccessProfileId == AccessProfileEnum.User.Id && !result.UserEnterprises.Any(ue => ue.LicenseManagement != null 
                 && ue.LicenseManagement.IsActive && (ue.LicenseManagement.IsIndefinite || ue.LicenseManagement.ExpirationDate >= DateTime.UtcNow)))
                 {
+                    Console.WriteLine("[DEBUG HANDLER] License check failed!");
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.InvalidCredentials, "Credenciais inválidas.");
                 }
 
                 string passwordHash = request.Password.Value.ToSha256Hash(result.PasswordSalt);
+                Console.WriteLine($"[DEBUG HANDLER] Generated hash: {passwordHash}");
+                Console.WriteLine($"[DEBUG HANDLER] Hash match: {passwordHash == result.PasswordHash}");
 
                 if (passwordHash != result.PasswordHash)
                 {
+                    Console.WriteLine("[DEBUG HANDLER] PASSWORD MISMATCH!");
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.InvalidCredentials, "Credenciais inválidas.");
                 }
 
@@ -62,6 +72,8 @@ namespace TasteFlow.Application.Authentication.Handlers
 			catch (Exception ex)
             {
                 var message = $"Ocorreu um erro durante o login de um usuário: E-mail: {request.Email}";
+                Console.WriteLine($"[DEBUG HANDLER] EXCEPTION! {ex.Message}");
+                Console.WriteLine($"[DEBUG HANDLER] Stack: {ex.StackTrace}");
 
                 //_eventLogger.Log(LogTypeEnum.Error, ex, message);
 
