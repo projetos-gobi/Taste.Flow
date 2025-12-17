@@ -17,10 +17,12 @@ namespace TasteFlow.Infrastructure.Repositories
     public class UsersRepository : BaseRepository<Users>, IUsersRepository
     {
         private readonly IEventLogger _eventLogger;
+        private readonly TasteFlowContext _context;
 
         public UsersRepository(TasteFlowContext context, IEventLogger eventLogger) : base(context)
         {
             _eventLogger = eventLogger;
+            _context = context;
         }
 
         public async Task<IEnumerable<Guid>> CreateUsersRangeAsync(IEnumerable<Users> users)
@@ -203,6 +205,50 @@ namespace TasteFlow.Infrastructure.Repositories
             var sql = $@"SELECT * FROM ""Users"" WHERE NOT ""IsDeleted""";
             
             return DbSet.FromSqlRaw(sql).AsNoTracking();
+        }
+
+        public async Task<List<Users>> GetUsersPagedDirectAsync(int page, int pageSize)
+        {
+            var users = new List<Users>();
+            var offset = (page - 1) * pageSize;
+
+            var connectionString = _context.Database.GetConnectionString();
+            using (var connection = new Npgsql.NpgsqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+                
+                var command = new Npgsql.NpgsqlCommand(
+                    @"SELECT ""Id"", ""AccessProfileId"", ""Name"", ""EmailAddress"", ""Contact"", ""CreatedOn"", ""IsActive"", ""IsDeleted""
+                      FROM ""Users"" 
+                      WHERE NOT ""IsDeleted""
+                      ORDER BY ""CreatedOn""
+                      LIMIT @pageSize OFFSET @offset", 
+                    connection);
+                
+                command.Parameters.AddWithValue("pageSize", pageSize);
+                command.Parameters.AddWithValue("offset", offset);
+                command.CommandTimeout = 30;
+
+                using (var reader = await command.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        users.Add(new Users
+                        {
+                            Id = reader.GetGuid(0),
+                            AccessProfileId = reader.GetGuid(1),
+                            Name = reader.GetString(2),
+                            EmailAddress = reader.GetString(3),
+                            Contact = reader.IsDBNull(4) ? null : reader.GetString(4),
+                            CreatedOn = reader.GetDateTime(5),
+                            IsActive = reader.GetBoolean(6),
+                            IsDeleted = reader.GetBoolean(7)
+                        });
+                    }
+                }
+            }
+
+            return users;
         }
 
         public async Task<bool> RecoverPasswordAsync(UserPasswordManagement userPasswordManagement, string newPassword)

@@ -50,13 +50,9 @@ namespace TasteFlow.Application.Users.Handlers
                 if (request.Filter.IsActive.HasValue)
                     query = query.Where(e => e.IsActive == request.Filter.IsActive);
 
-                Console.WriteLine("[HANDLER] Executing SELECT...");
-                // Executar SELECT primeiro (mais rápido)
-                var result = await query
-                    .OrderBy(x => x.CreatedOn)
-                    .Skip((request.Query.Page - 1) * request.Query.PageSize)
-                    .Take(request.Query.PageSize)
-                    .ToListAsync(cancellationToken);
+                Console.WriteLine("[HANDLER] Executing SELECT using ADO.NET direct...");
+                // Usar ADO.NET direto para evitar travamento do Entity Framework
+                var result = await _usersRepository.GetUsersPagedDirectAsync(request.Query.Page, request.Query.PageSize);
 
                 Console.WriteLine($"[HANDLER] SELECT returned {result.Count} users");
 
