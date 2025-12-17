@@ -61,15 +61,19 @@ namespace TasteFlow.Api.Controllers.Authentication
 
                 Console.WriteLine("[DEBUG] Sending query to MediatR...");
                 var result = await _mediator.Send(query);
-                Console.WriteLine($"[DEBUG] MediatR result received - Token: {(!String.IsNullOrEmpty(result.Token) ? "Present" : "Null/Empty")}");
+                Console.WriteLine($"[DEBUG] MediatR result received - Token: {(!String.IsNullOrEmpty(result.Token) ? result.Token.Substring(0,20)+"..." : "Null/Empty")}");
+                Console.WriteLine($"[DEBUG] AuthenticationStatus: {result.AuthenticationStatus}");
 
                 if (!String.IsNullOrEmpty(result.Token))
                 {
                     Console.WriteLine("[DEBUG] Token is present, mapping to response...");
                     var response = _mapper.Map<AuthenticationResponse>(result);
-                    Console.WriteLine("[DEBUG] Response mapped successfully!");
+                    Console.WriteLine($"[DEBUG] Response mapped - Token: {response.Token?.Substring(0,20)}..., Status: {response.AuthenticationStatus}");
+                    Console.WriteLine("[DEBUG] Calling Response() method...");
 
-                    return Response(response);
+                    var apiResponse = Response(response);
+                    Console.WriteLine($"[DEBUG] Response() returned: {apiResponse.GetType().Name}");
+                    return apiResponse;
                 }
                 else
                 {
