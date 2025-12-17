@@ -26,7 +26,11 @@ namespace TasteFlow.Infrastructure.Startup
         {
             services.AddAuth(configuration);
 
-            services.AddDbContext<TasteFlowContext>(options => options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+            services.AddDbContext<TasteFlowContext>(options => 
+                options.UseNpgsql(
+                    configuration.GetConnectionString("DefaultConnection"),
+                    npgsqlOptions => npgsqlOptions.CommandTimeout(120) // 120 segundos timeout
+                ));
 
             services.InjectionDependency(configuration);
 
