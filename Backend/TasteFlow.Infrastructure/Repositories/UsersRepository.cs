@@ -199,7 +199,7 @@ namespace TasteFlow.Infrastructure.Repositories
 
         public IQueryable<Users> GetUsersPaged()
         {
-            // Query simplificada para evitar timeout no Supabase
+            // Query ULTRA SIMPLIFICADA - SEM JOINs para evitar timeout
             var result = GetAllNoTracking()
                 .Where(x => !x.IsDeleted)
                 .Select(x => new Users()
@@ -211,25 +211,7 @@ namespace TasteFlow.Infrastructure.Repositories
                     Contact = x.Contact,
                     CreatedOn = x.CreatedOn,
                     IsActive = x.IsActive,
-                    IsDeleted = x.IsDeleted,
-                    AccessProfile = new AccessProfile()
-                    {
-                        Id = x.AccessProfileId,
-                        Name = x.AccessProfile.Name
-                    },
-                    UserEnterprises = x.UserEnterprises
-                        .Where(ue => ue.IsActive && !ue.IsDeleted)
-                        .Select(ue => new UserEnterprise()
-                        {
-                            Id = ue.Id,
-                            LicenseManagementId = ue.LicenseManagementId,
-                            Enterprise = new Enterprise()
-                            {
-                                Id = ue.Enterprise.Id,
-                                FantasyName = ue.Enterprise.FantasyName,
-                                SocialReason = ue.Enterprise.SocialReason
-                            }
-                        }).ToList()
+                    IsDeleted = x.IsDeleted
                 });
 
             return result;
