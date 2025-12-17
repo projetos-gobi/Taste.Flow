@@ -48,7 +48,7 @@ export default function LoginPage() {
   const handleLogin = async  (e: React.FormEvent) => {
     e.preventDefault();
 
-    const request: ILoginRequest = { email, password };
+    const request: ILoginRequest = { Email: email, Password: password };
 
     try {
       const response = await login(request);
