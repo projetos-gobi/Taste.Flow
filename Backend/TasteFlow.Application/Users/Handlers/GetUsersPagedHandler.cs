@@ -53,7 +53,7 @@ namespace TasteFlow.Application.Users.Handlers
                     LicenseName = "", // Não carregamos ainda
                     Contact = "", // Não carregamos ainda
                     AccessProfileName = "", // Não carregamos ainda
-                    IsActive = true // Assumir ativo por enquanto
+                    IsActive = u.IsActive
                 }).ToList();
 
                 Console.WriteLine($"[HANDLER] Mapped {response.Count} items");

@@ -352,7 +352,7 @@ namespace TasteFlow.Infrastructure.Repositories
                     // APENAS SELECT - SEM COUNT
                     var offset = (page - 1) * pageSize;
                     var selectSql = @"
-                        SELECT ""Id"", ""Name"", ""EmailAddress"" 
+                        SELECT ""Id"", ""Name"", ""EmailAddress"", ""AccessProfileId"", ""IsActive"" 
                         FROM ""Users"" 
                         WHERE NOT ""IsDeleted"" 
                         LIMIT @pageSize OFFSET @offset";
@@ -372,7 +372,9 @@ namespace TasteFlow.Infrastructure.Repositories
                             {
                                 Id = reader.GetGuid(0),
                                 Name = reader.GetString(1),
-                                EmailAddress = reader.GetString(2)
+                                EmailAddress = reader.GetString(2),
+                                AccessProfileId = reader.GetGuid(3),
+                                IsActive = reader.GetBoolean(4)
                             });
                         }
                     }
