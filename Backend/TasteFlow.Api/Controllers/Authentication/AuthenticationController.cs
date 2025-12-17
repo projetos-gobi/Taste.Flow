@@ -59,22 +59,30 @@ namespace TasteFlow.Api.Controllers.Authentication
                     return BadRequest($"Mapping error: {ex.Message}");
                 }
 
+                Console.WriteLine("[DEBUG] Sending query to MediatR...");
                 var result = await _mediator.Send(query);
+                Console.WriteLine($"[DEBUG] MediatR result received - Token: {(!String.IsNullOrEmpty(result.Token) ? "Present" : "Null/Empty")}");
 
                 if (!String.IsNullOrEmpty(result.Token))
                 {
+                    Console.WriteLine("[DEBUG] Token is present, mapping to response...");
                     var response = _mapper.Map<AuthenticationResponse>(result);
+                    Console.WriteLine("[DEBUG] Response mapped successfully!");
 
                     return Response(response);
                 }
                 else
                 {
+                    Console.WriteLine("[DEBUG] Token is null/empty, returning Unauthorized");
                     return Unauthorized();
                 }
             }
             catch(Exception ex)
             {
-                return BadRequest();
+                Console.WriteLine($"[DEBUG] OUTER EXCEPTION! Message: {ex.Message}");
+                Console.WriteLine($"[DEBUG] Exception Type: {ex.GetType().Name}");
+                Console.WriteLine($"[DEBUG] Stack trace: {ex.StackTrace}");
+                return BadRequest($"Error: {ex.Message}");
             }
         }
 
