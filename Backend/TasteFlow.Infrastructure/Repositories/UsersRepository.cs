@@ -199,12 +199,9 @@ namespace TasteFlow.Infrastructure.Repositories
 
         public IQueryable<Users> GetUsersPaged()
         {
-            // Query RAW SQL para debug - bypass Entity Framework
-            var sql = @"SELECT ""Id"", ""AccessProfileId"", ""Name"", ""EmailAddress"", ""Contact"", ""CreatedOn"", ""IsActive"", ""IsDeleted"" 
-                       FROM ""Users"" 
-                       WHERE NOT ""IsDeleted""";
-            
-            return DbSet.FromSqlRaw(sql).AsNoTracking();
+            // Query simplificada COM ÍNDICES - deve funcionar agora!
+            return GetAllNoTracking()
+                .Where(x => !x.IsDeleted);
         }
 
         public async Task<bool> RecoverPasswordAsync(UserPasswordManagement userPasswordManagement, string newPassword)
