@@ -210,42 +210,45 @@ namespace TasteFlow.Infrastructure.Repositories
         public async Task<List<Users>> GetUsersPagedDirectAsync(int page, int pageSize)
         {
             var users = new List<Users>();
-            var offset = (page - 1) * pageSize;
 
-            var connectionString = _context.Database.GetConnectionString();
-            using (var connection = new Npgsql.NpgsqlConnection(connectionString))
+            try
             {
-                await connection.OpenAsync();
-                
-                var command = new Npgsql.NpgsqlCommand(
-                    @"SELECT ""Id"", ""AccessProfileId"", ""Name"", ""EmailAddress"", ""Contact"", ""CreatedOn"", ""IsActive"", ""IsDeleted""
-                      FROM ""Users"" 
-                      WHERE NOT ""IsDeleted""
-                      ORDER BY ""CreatedOn""
-                      LIMIT @pageSize OFFSET @offset", 
-                    connection);
-                
-                command.Parameters.AddWithValue("pageSize", pageSize);
-                command.Parameters.AddWithValue("offset", offset);
-                command.CommandTimeout = 30;
+                Console.WriteLine($"[REPO] Getting connection string...");
+                var connectionString = _context.Database.GetConnectionString();
+                Console.WriteLine($"[REPO] Connection string OK");
 
-                using (var reader = await command.ExecuteReaderAsync())
+                using (var connection = new Npgsql.NpgsqlConnection(connectionString))
                 {
-                    while (await reader.ReadAsync())
+                    Console.WriteLine($"[REPO] Opening connection...");
+                    await connection.OpenAsync();
+                    Console.WriteLine($"[REPO] Connection opened!");
+
+                    var command = new Npgsql.NpgsqlCommand(
+                        "SELECT \"Id\", \"Name\", \"EmailAddress\" FROM \"Users\" WHERE NOT \"IsDeleted\" LIMIT 10", 
+                        connection);
+                    command.CommandTimeout = 10;
+
+                    Console.WriteLine($"[REPO] Executing query...");
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        users.Add(new Users
+                        Console.WriteLine($"[REPO] Reading results...");
+                        while (await reader.ReadAsync())
                         {
-                            Id = reader.GetGuid(0),
-                            AccessProfileId = reader.GetGuid(1),
-                            Name = reader.GetString(2),
-                            EmailAddress = reader.GetString(3),
-                            Contact = reader.IsDBNull(4) ? null : reader.GetString(4),
-                            CreatedOn = reader.GetDateTime(5),
-                            IsActive = reader.GetBoolean(6),
-                            IsDeleted = reader.GetBoolean(7)
-                        });
+                            users.Add(new Users
+                            {
+                                Id = reader.GetGuid(0),
+                                Name = reader.GetString(1),
+                                EmailAddress = reader.GetString(2)
+                            });
+                        }
                     }
+                    Console.WriteLine($"[REPO] Found {users.Count} users!");
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[REPO ERROR] {ex.Message}");
+                throw;
             }
 
             return users;
