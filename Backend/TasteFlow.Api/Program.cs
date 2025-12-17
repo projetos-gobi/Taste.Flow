@@ -41,7 +41,11 @@ void ConfigureServices(WebApplicationBuilder builder)
     builder.Services.AddMemoryCache();
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddApplication();
-    builder.Services.AddControllers();
+    builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        });
 
     builder.Services.AddMediatR(cfg => { cfg.RegisterServicesFromAssemblies(typeof(Program).Assembly); });
 
