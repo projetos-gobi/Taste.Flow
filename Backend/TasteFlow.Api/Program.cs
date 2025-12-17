@@ -28,6 +28,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseResponseCompression();
 
+// Tempo total por request + Server-Timing (diagnóstico de performance end-to-end)
+app.UseMiddleware<RequestTimingMiddleware>();
+
 app.UseCors("PolicyTasteFlow");
 
 app.UseAuthentication();
