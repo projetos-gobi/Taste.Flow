@@ -26,7 +26,7 @@ namespace TasteFlow.Infrastructure.Startup
         {
             services.AddAuth(configuration);
 
-            services.AddDbContext<TasteFlowContext>(options => options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+            services.AddDbContext<TasteFlowContext>(options => options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
             services.InjectionDependency(configuration);
 
