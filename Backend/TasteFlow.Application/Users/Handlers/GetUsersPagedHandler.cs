@@ -10,7 +10,6 @@ using TasteFlow.Application.Users.Queries;
 using TasteFlow.Application.Users.Responses;
 using TasteFlow.Domain.Interfaces.Common;
 using TasteFlow.Domain.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace TasteFlow.Application.Users.Handlers
 {
@@ -33,26 +32,10 @@ namespace TasteFlow.Application.Users.Handlers
             try
             {
                 Console.WriteLine("[HANDLER] Starting GetUsersPaged...");
-                var query = _usersRepository.GetUsersPaged();
 
-                if (request.Filter.AccessProfileId.HasValue)
-                    query = query.Where(e => e.AccessProfileId == request.Filter.AccessProfileId);
-
-                if (!string.IsNullOrWhiteSpace(request.Filter.Name))
-                    query = query.Where(e => e.Name.ToLower().Contains(request.Filter.Name.ToLower()));
-
-                if (!string.IsNullOrWhiteSpace(request.Filter.FantasyName))
-                    query = query.Where(e => e.UserEnterprises.Any(a => a.Enterprise.FantasyName.ToLower().Contains(request.Filter.FantasyName.ToLower())));
-
-                if (!string.IsNullOrWhiteSpace(request.Filter.EmailAddress))
-                    query = query.Where(e => e.EmailAddress.ToLower().Contains(request.Filter.EmailAddress.ToLower()));
-
-                if (request.Filter.IsActive.HasValue)
-                    query = query.Where(e => e.IsActive == request.Filter.IsActive);
-
+                // REMOVER COMPLETAMENTE Entity Framework - usar apenas ADO.NET direto
                 Console.WriteLine("[HANDLER] Executing SELECT using ADO.NET direct...");
-                // Usar ADO.NET direto para evitar travamento do Entity Framework
-                var result = await _usersRepository.GetUsersPagedDirectAsync(request.Query.Page, request.Query.PageSize);
+                var result = await _usersRepository.GetUsersPagedDirectAsync(request.Query.Page, request.Query.PageSize, request.Filter);
 
                 Console.WriteLine($"[HANDLER] SELECT returned {result.Count} users");
 

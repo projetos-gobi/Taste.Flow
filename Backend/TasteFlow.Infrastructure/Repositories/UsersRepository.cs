@@ -217,13 +217,13 @@ namespace TasteFlow.Infrastructure.Repositories
             return DbSet.FromSqlRaw(sql).AsNoTracking();
         }
 
-        public async Task<List<Users>> GetUsersPagedDirectAsync(int page, int pageSize)
+        public async Task<List<Users>> GetUsersPagedDirectAsync(int page, int pageSize, object filter = null)
         {
             var users = new List<Users>();
 
             try
             {
-                Console.WriteLine($"[REPO] Using IConfiguration connection string");
+                Console.WriteLine($"[REPO] Starting GetUsersPagedDirectAsync - page: {page}, pageSize: {pageSize}");
 
                 using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
                 {
@@ -231,9 +231,22 @@ namespace TasteFlow.Infrastructure.Repositories
                     await connection.OpenAsync();
                     Console.WriteLine($"[REPO] Connection opened!");
 
-                    var command = new Npgsql.NpgsqlCommand(
-                        "SELECT \"Id\", \"Name\", \"EmailAddress\" FROM \"Users\" WHERE NOT \"IsDeleted\" LIMIT 10", 
-                        connection);
+                    // Calcular OFFSET para paginação
+                    var offset = (page - 1) * pageSize;
+                    
+                    // Query SQL simples - por enquanto ignorar filtros para resolver o problema de carregamento
+                    var sql = @"
+                        SELECT ""Id"", ""Name"", ""EmailAddress"" 
+                        FROM ""Users"" 
+                        WHERE NOT ""IsDeleted"" 
+                        ORDER BY ""Name"" 
+                        LIMIT @pageSize OFFSET @offset";
+
+                    Console.WriteLine($"[REPO] SQL: {sql} (pageSize: {pageSize}, offset: {offset})");
+
+                    var command = new Npgsql.NpgsqlCommand(sql, connection);
+                    command.Parameters.AddWithValue("pageSize", pageSize);
+                    command.Parameters.AddWithValue("offset", offset);
                     command.CommandTimeout = 30;
 
                     Console.WriteLine($"[REPO] Executing query...");
