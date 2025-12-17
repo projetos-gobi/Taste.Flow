@@ -199,22 +199,12 @@ namespace TasteFlow.Infrastructure.Repositories
 
         public IQueryable<Users> GetUsersPaged()
         {
-            // Query ULTRA SIMPLIFICADA - SEM JOINs para evitar timeout
-            var result = GetAllNoTracking()
-                .Where(x => !x.IsDeleted)
-                .Select(x => new Users()
-                {
-                    Id = x.Id,
-                    AccessProfileId = x.AccessProfileId,
-                    Name = x.Name,
-                    EmailAddress = x.EmailAddress,
-                    Contact = x.Contact,
-                    CreatedOn = x.CreatedOn,
-                    IsActive = x.IsActive,
-                    IsDeleted = x.IsDeleted
-                });
-
-            return result;
+            // Query RAW SQL para debug - bypass Entity Framework
+            var sql = @"SELECT ""Id"", ""AccessProfileId"", ""Name"", ""EmailAddress"", ""Contact"", ""CreatedOn"", ""IsActive"", ""IsDeleted"" 
+                       FROM ""Users"" 
+                       WHERE NOT ""IsDeleted""";
+            
+            return DbSet.FromSqlRaw(sql).AsNoTracking();
         }
 
         public async Task<bool> RecoverPasswordAsync(UserPasswordManagement userPasswordManagement, string newPassword)

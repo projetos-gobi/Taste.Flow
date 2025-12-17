@@ -56,19 +56,8 @@ namespace TasteFlow.Application.Authentication.Handlers
                 // Gerar token JWT primeiro
                 var token = _tokenGenerator.GenerateToken(result);
 
-                // Criar refresh token de forma assíncrona (fire-and-forget para evitar timeout)
+                // Gerar refresh token localmente (não salvar no banco por enquanto para evitar bloqueio do DbContext)
                 var refreshTokenString = Guid.NewGuid().ToString();
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await _userRefreshTokenRepository.CreateUserRefreshTokenAsync(result.Id);
-                    }
-                    catch
-                    {
-                        // Silenciar erro para não afetar o login
-                    }
-                });
 
                 return new AuthenticationResult(result.Id, result.EmailAddress, result.AccessProfileId.ToString(), token, "Autenticação realizada com sucesso.", refreshTokenString, AuthenticationStatusEnum.Success);
             }
