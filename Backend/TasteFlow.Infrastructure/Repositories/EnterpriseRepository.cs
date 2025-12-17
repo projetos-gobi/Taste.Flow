@@ -68,6 +68,13 @@ namespace TasteFlow.Infrastructure.Repositories
             try
             {
                 Console.WriteLine($"[REPO ENTERPRISE] Starting GetAllEnterprisesForUserRegistrationAsync using ADO.NET");
+                Console.WriteLine($"[REPO ENTERPRISE] Connection string is null: {_connectionString == null}");
+
+                if (string.IsNullOrEmpty(_connectionString))
+                {
+                    Console.WriteLine($"[REPO ENTERPRISE ERROR] Connection string is null or empty!");
+                    return Enumerable.Empty<Enterprise>();
+                }
 
                 using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
                 {
