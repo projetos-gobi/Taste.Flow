@@ -105,7 +105,52 @@ namespace TasteFlow.Infrastructure.Repositories
                         }
                     }
 
-                    Console.WriteLine($"[AUTH] User found: {user != null}");
+                    if (user == null)
+                    {
+                        Console.WriteLine($"[AUTH] User not found for email: {email}");
+                        return null;
+                    }
+
+                    // Carregar UserEnterprises com LicenseManagement para validação de licença
+                    Console.WriteLine($"[AUTH] Loading UserEnterprises for user: {user.Id}");
+                    var userEnterprisesSql = @"
+                        SELECT 
+                            ue.""Id"", 
+                            ue.""LicenseManagementId"", 
+                            COALESCE(lm.""IsActive"", false) AS LicenseIsActive,
+                            COALESCE(lm.""IsIndefinite"", false) AS LicenseIsIndefinite,
+                            lm.""ExpirationDate""
+                        FROM ""UserEnterprise"" ue
+                        LEFT JOIN ""LicenseManagement"" lm ON ue.""LicenseManagementId"" = lm.""Id"" AND NOT lm.""IsDeleted""
+                        WHERE ue.""UserId"" = @userId AND ue.""IsActive"" AND NOT ue.""IsDeleted""";
+
+                    var userEnterprisesCommand = new Npgsql.NpgsqlCommand(userEnterprisesSql, connection);
+                    userEnterprisesCommand.Parameters.AddWithValue("userId", user.Id);
+                    userEnterprisesCommand.CommandTimeout = 30;
+
+                    user.UserEnterprises = new List<UserEnterprise>();
+                    using (var reader = await userEnterprisesCommand.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var licenseManagementId = reader.IsDBNull(1) ? (Guid?)null : reader.GetGuid(1);
+                            
+                            user.UserEnterprises.Add(new UserEnterprise
+                            {
+                                Id = reader.GetGuid(0),
+                                LicenseManagementId = licenseManagementId,
+                                LicenseManagement = licenseManagementId.HasValue ? new LicenseManagement
+                                {
+                                    Id = licenseManagementId.Value,
+                                    IsActive = reader.GetBoolean(2),
+                                    IsIndefinite = reader.GetBoolean(3),
+                                    ExpirationDate = reader.IsDBNull(4) ? DateTime.MinValue : reader.GetDateTime(4)
+                                } : null
+                            });
+                        }
+                    }
+
+                    Console.WriteLine($"[AUTH] User found: {user != null}, UserEnterprises: {user.UserEnterprises.Count}");
                     return user;
                 }
             }
