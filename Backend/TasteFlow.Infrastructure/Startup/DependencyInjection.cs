@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using System;
 using System.Text;
 using TasteFlow.Domain.Interfaces;
@@ -27,10 +28,36 @@ namespace TasteFlow.Infrastructure.Startup
         {
             services.AddAuth(configuration);
 
+            // NpgsqlDataSource singleton: um pool único e eficiente para ADO.NET (reutilizado por repositórios e warmup).
+            services.AddSingleton<NpgsqlDataSource>(_ =>
+            {
+                var raw = configuration.GetConnectionString("DefaultConnection");
+                var normalized = NpgsqlConnectionStringNormalizer.Normalize(raw);
+
+                if (string.IsNullOrWhiteSpace(normalized))
+                    throw new InvalidOperationException("Connection string DefaultConnection não configurada.");
+
+                // Forçar defaults de performance/estabilidade caso não venham do env/appsettings
+                var csb = new NpgsqlConnectionStringBuilder(normalized)
+                {
+                    Pooling = true,
+                    MinPoolSize = 1,
+                    MaxPoolSize = 20,
+                    Timeout = 5,
+                    CommandTimeout = 15,
+                    KeepAlive = 30
+                };
+
+                return new NpgsqlDataSourceBuilder(csb.ConnectionString).Build();
+            });
+
             services.AddDbContext<TasteFlowContext>(options => 
             {
+                var normalizedConnectionString = NpgsqlConnectionStringNormalizer.Normalize(
+                    configuration.GetConnectionString("DefaultConnection"));
+
                 options.UseNpgsql(
-                    configuration.GetConnectionString("DefaultConnection"),
+                    normalizedConnectionString,
                     npgsqlOptions => 
                     {
                         npgsqlOptions.CommandTimeout(30); // 30 segundos timeout

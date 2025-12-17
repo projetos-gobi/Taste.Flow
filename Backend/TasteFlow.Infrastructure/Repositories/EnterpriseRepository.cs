@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,12 +18,12 @@ namespace TasteFlow.Infrastructure.Repositories
     public class EnterpriseRepository : BaseRepository<Enterprise>, IEnterpriseRepository
     {
         private readonly TasteFlowContext _context;
-        private readonly string _connectionString;
+        private readonly NpgsqlDataSource _dataSource;
 
-        public EnterpriseRepository(TasteFlowContext context, IConfiguration configuration) : base(context)
+        public EnterpriseRepository(TasteFlowContext context, NpgsqlDataSource dataSource) : base(context)
         {
             _context = context;
-            _connectionString = NpgsqlConnectionStringNormalizer.Normalize(configuration.GetConnectionString("DefaultConnection"));
+            _dataSource = dataSource;
         }
 
         public async Task<bool> CreateEnterpriseAsync(Enterprise enterprise)
@@ -69,17 +70,9 @@ namespace TasteFlow.Infrastructure.Repositories
             try
             {
                 Console.WriteLine($"[REPO ENTERPRISE] Starting GetAllEnterprisesForUserRegistrationAsync using ADO.NET");
-                Console.WriteLine($"[REPO ENTERPRISE] Connection string is null: {_connectionString == null}");
 
-                if (string.IsNullOrEmpty(_connectionString))
+                await using (var connection = await _dataSource.OpenConnectionAsync())
                 {
-                    Console.WriteLine($"[REPO ENTERPRISE ERROR] Connection string is null or empty!");
-                    return Enumerable.Empty<Enterprise>();
-                }
-
-                using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
                     Console.WriteLine($"[REPO ENTERPRISE] Connection opened!");
 
                     // Query SQL com subquery para contar licenças usadas
@@ -105,10 +98,10 @@ namespace TasteFlow.Infrastructure.Repositories
 
                     Console.WriteLine($"[REPO ENTERPRISE] Executing query...");
 
-                    var command = new Npgsql.NpgsqlCommand(sql, connection);
+                    var command = new NpgsqlCommand(sql, connection);
                     command.CommandTimeout = 30;
 
-                    using (var reader = await command.ExecuteReaderAsync())
+                    await using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
                         {

@@ -16,6 +16,9 @@ namespace TasteFlow.Infrastructure.Services
 
             var parts = connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries);
             var kv = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            // Importante: manter ordem determinística para não "quebrar" pooling por variação textual da connection string.
+            // (Pools são separados por string exata.)
+            var orderedKeys = new List<string>(parts.Length);
 
             foreach (var raw in parts)
             {
@@ -38,16 +41,21 @@ namespace TasteFlow.Infrastructure.Services
                 else if (key.Equals("Max Pool Size", StringComparison.OrdinalIgnoreCase))
                     key = "Maximum Pool Size";
 
+                if (!kv.ContainsKey(key))
+                    orderedKeys.Add(key);
+
                 kv[key] = value;
             }
 
-            var normalized = new List<string>(kv.Count);
-            foreach (var pair in kv)
+            var normalized = new List<string>(orderedKeys.Count);
+            foreach (var key in orderedKeys)
             {
-                if (string.IsNullOrEmpty(pair.Value))
-                    normalized.Add(pair.Key);
+                var value = kv[key];
+
+                if (string.IsNullOrEmpty(value))
+                    normalized.Add(key);
                 else
-                    normalized.Add($"{pair.Key}={pair.Value}");
+                    normalized.Add($"{key}={value}");
             }
 
             return string.Join(';', normalized);

@@ -1,11 +1,9 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using TasteFlow.Infrastructure.Services;
 
 namespace TasteFlow.Api.Infrastructure
 {
@@ -13,31 +11,41 @@ namespace TasteFlow.Api.Infrastructure
     /// Aquece a conexão com o Postgres no startup para reduzir latência do primeiro request
     /// (DNS/TLS/handshake/pool init), que no Fly + Supabase pode parecer "travar" no login/listagem.
     /// </summary>
-    public sealed class DbWarmupHostedService : IHostedService
+    public sealed class DbWarmupHostedService : BackgroundService
     {
-        private readonly IConfiguration _configuration;
+        private readonly NpgsqlDataSource _dataSource;
 
-        public DbWarmupHostedService(IConfiguration configuration)
+        public DbWarmupHostedService(NpgsqlDataSource dataSource)
         {
-            _configuration = configuration;
+            _dataSource = dataSource;
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken)
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            // Warmup imediato + ping periódico para manter pelo menos 1 conexão ativa (reduz openMs em requests).
+            await WarmupOnce(stoppingToken);
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromMinutes(2), stoppingToken);
+                }
+                catch (TaskCanceledException)
+                {
+                    break;
+                }
+
+                await WarmupOnce(stoppingToken);
+            }
+        }
+
+        private async Task WarmupOnce(CancellationToken cancellationToken)
         {
             try
             {
-                var connectionString = NpgsqlConnectionStringNormalizer.Normalize(
-                    _configuration.GetConnectionString("DefaultConnection"));
-
-                if (string.IsNullOrWhiteSpace(connectionString))
-                {
-                    Console.WriteLine("[WARMUP] DefaultConnection vazia. Warmup ignorado.");
-                    return;
-                }
-
                 var swOpen = Stopwatch.StartNew();
-                await using var connection = new NpgsqlConnection(connectionString);
-                await connection.OpenAsync(cancellationToken);
+                await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
                 swOpen.Stop();
 
                 await using var cmd = new NpgsqlCommand("SELECT 1", connection)
@@ -57,8 +65,6 @@ namespace TasteFlow.Api.Infrastructure
                 Console.WriteLine($"[WARMUP] DB warmup falhou: {ex.Message}");
             }
         }
-
-        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }
 

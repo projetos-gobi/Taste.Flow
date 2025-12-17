@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Npgsql;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -23,13 +24,13 @@ namespace TasteFlow.Infrastructure.Repositories
     {
         private readonly IEventLogger _eventLogger;
         private readonly TasteFlowContext _context;
-        private readonly string _connectionString;
+        private readonly NpgsqlDataSource _dataSource;
 
-        public UsersRepository(TasteFlowContext context, IEventLogger eventLogger, IConfiguration configuration) : base(context)
+        public UsersRepository(TasteFlowContext context, IEventLogger eventLogger, NpgsqlDataSource dataSource) : base(context)
         {
             _eventLogger = eventLogger;
             _context = context;
-            _connectionString = NpgsqlConnectionStringNormalizer.Normalize(configuration.GetConnectionString("DefaultConnection"));
+            _dataSource = dataSource;
         }
 
         public async Task<IEnumerable<Guid>> CreateUsersRangeAsync(IEnumerable<Users> users)
@@ -63,13 +64,6 @@ namespace TasteFlow.Infrastructure.Repositories
         public async Task<Users> GetAuthenticatedAccountAsync(string email, string password)
         {
             Console.WriteLine($"[AUTH] Using ADO.NET for login: {email}");
-            Console.WriteLine($"[AUTH] Connection string is null: {_connectionString == null}");
-
-            if (string.IsNullOrWhiteSpace(_connectionString))
-            {
-                Console.WriteLine($"[AUTH ERROR] Connection string is null or empty!");
-                throw new InvalidOperationException("Connection string DefaultConnection não configurada.");
-            }
 
             const int maxRetries = 2;
             var delayMs = 100;
@@ -80,56 +74,53 @@ namespace TasteFlow.Infrastructure.Repositories
             {
                 try
                 {
-                    using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
+                    var swOpen = Stopwatch.StartNew();
+                    await using var connection = await _dataSource.OpenConnectionAsync();
+                    swOpen.Stop();
+                    Console.WriteLine($"[AUTH] Connection opened! attempt={attempt}/{maxRetries}");
+
+                    await using var command = new NpgsqlCommand(
+                        @"SELECT ""Id"", ""EmailAddress"", ""PasswordHash"", ""PasswordSalt"", ""Name"", ""AccessProfileId"", ""MustChangePassword""
+                          FROM ""Users"" 
+                          WHERE ""EmailAddress"" = @email AND ""IsActive"" AND NOT ""IsDeleted""
+                          LIMIT 1",
+                        connection);
+
+                    command.Parameters.AddWithValue("email", email);
+                    command.CommandTimeout = 15;
+
+                    Users user = null;
+                    var swQuery = Stopwatch.StartNew();
+                    await using (var reader = await command.ExecuteReaderAsync())
                     {
-                        var swOpen = Stopwatch.StartNew();
-                        await connection.OpenAsync();
-                        swOpen.Stop();
-                        Console.WriteLine($"[AUTH] Connection opened! attempt={attempt}/{maxRetries}");
-
-                        var command = new Npgsql.NpgsqlCommand(
-                            @"SELECT ""Id"", ""EmailAddress"", ""PasswordHash"", ""PasswordSalt"", ""Name"", ""AccessProfileId"", ""MustChangePassword""
-                              FROM ""Users"" 
-                              WHERE ""EmailAddress"" = @email AND ""IsActive"" AND NOT ""IsDeleted""
-                              LIMIT 1",
-                            connection);
-
-                        command.Parameters.AddWithValue("email", email);
-                        command.CommandTimeout = 15;
-
-                        Users user = null;
-                        var swQuery = Stopwatch.StartNew();
-                        using (var reader = await command.ExecuteReaderAsync())
+                        if (await reader.ReadAsync())
                         {
-                            if (await reader.ReadAsync())
+                            user = new Users
                             {
-                                user = new Users
-                                {
-                                    Id = reader.GetGuid(0),
-                                    EmailAddress = reader.GetString(1),
-                                    PasswordHash = reader.GetString(2),
-                                    PasswordSalt = reader.GetString(3),
-                                    Name = reader.GetString(4),
-                                    AccessProfileId = reader.GetGuid(5),
-                                    MustChangePassword = reader.GetBoolean(6),
-                                    UserEnterprises = new List<UserEnterprise>(),
-                                    UserPasswordManagements = new List<UserPasswordManagement>()
-                                };
-                            }
+                                Id = reader.GetGuid(0),
+                                EmailAddress = reader.GetString(1),
+                                PasswordHash = reader.GetString(2),
+                                PasswordSalt = reader.GetString(3),
+                                Name = reader.GetString(4),
+                                AccessProfileId = reader.GetGuid(5),
+                                MustChangePassword = reader.GetBoolean(6),
+                                UserEnterprises = new List<UserEnterprise>(),
+                                UserPasswordManagements = new List<UserPasswordManagement>()
+                            };
                         }
-                        swQuery.Stop();
-                        Console.WriteLine($"[AUTH] timings: openMs={swOpen.ElapsedMilliseconds} queryMs={swQuery.ElapsedMilliseconds}");
-
-                        if (user == null)
-                        {
-                            Console.WriteLine($"[AUTH] User not found for email: {email}");
-                            return null;
-                        }
-
-                        user.UserEnterprises = new List<UserEnterprise>();
-                        Console.WriteLine($"[AUTH] User found, returning user");
-                        return user;
                     }
+                    swQuery.Stop();
+                    Console.WriteLine($"[AUTH] timings: openMs={swOpen.ElapsedMilliseconds} queryMs={swQuery.ElapsedMilliseconds}");
+
+                    if (user == null)
+                    {
+                        Console.WriteLine($"[AUTH] User not found for email: {email}");
+                        return null;
+                    }
+
+                    user.UserEnterprises = new List<UserEnterprise>();
+                    Console.WriteLine($"[AUTH] User found, returning user");
+                    return user;
                 }
                 catch (Exception ex) when (attempt < maxRetries && IsTransientDbException(ex))
                 {
@@ -289,16 +280,14 @@ namespace TasteFlow.Infrastructure.Repositories
                 Console.WriteLine($"[REPO] Starting GetUsersPagedWithCountDirectAsync - page: {page}, pageSize: {pageSize}");
 
                 // USAR MESMA CONEXÃO para COUNT e SELECT - evita problemas de concorrência
-                using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
+                await using (var connection = await _dataSource.OpenConnectionAsync())
                 {
-                    Console.WriteLine($"[REPO] Opening connection...");
-                    await connection.OpenAsync();
                     Console.WriteLine($"[REPO] Connection opened!");
 
                     // PRIMEIRO: Fazer COUNT na mesma conexão
                     Console.WriteLine($"[REPO] Executing COUNT...");
                     var countSql = @"SELECT COUNT(*) FROM ""Users"" WHERE NOT ""IsDeleted""";
-                    var countCommand = new Npgsql.NpgsqlCommand(countSql, connection);
+                    var countCommand = new NpgsqlCommand(countSql, connection);
                     countCommand.CommandTimeout = 30;
                     totalCount = Convert.ToInt32(await countCommand.ExecuteScalarAsync());
                     Console.WriteLine($"[REPO] Total count: {totalCount}");
@@ -313,12 +302,12 @@ namespace TasteFlow.Infrastructure.Repositories
                         LIMIT @pageSize OFFSET @offset";
 
                     Console.WriteLine($"[REPO] Executing SELECT (simplified, no ORDER BY)...");
-                    var selectCommand = new Npgsql.NpgsqlCommand(selectSql, connection);
+                    var selectCommand = new NpgsqlCommand(selectSql, connection);
                     selectCommand.Parameters.AddWithValue("pageSize", pageSize);
                     selectCommand.Parameters.AddWithValue("offset", offset);
                     selectCommand.CommandTimeout = 10; // Reduzir timeout para falhar mais rápido se houver problema
 
-                    using (var reader = await selectCommand.ExecuteReaderAsync())
+                    await using (var reader = await selectCommand.ExecuteReaderAsync())
                     {
                         Console.WriteLine($"[REPO] Reading results...");
                         while (await reader.ReadAsync())
@@ -359,17 +348,9 @@ namespace TasteFlow.Infrastructure.Repositories
                     users.Clear();
                     Console.WriteLine($"[REPO] Starting GetUsersPagedDirectAsync (NO COUNT) - page: {page}, pageSize: {pageSize}, retry: {retryCount}");
 
-                    if (string.IsNullOrEmpty(_connectionString))
+                    var swOpen = Stopwatch.StartNew();
+                    await using (var connection = await _dataSource.OpenConnectionAsync())
                     {
-                        Console.WriteLine($"[REPO ERROR] Connection string is null or empty!");
-                        return users;
-                    }
-
-                    using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
-                    {
-                        Console.WriteLine($"[REPO] Opening connection...");
-                        var swOpen = Stopwatch.StartNew();
-                        await connection.OpenAsync();
                         swOpen.Stop();
                         Console.WriteLine($"[REPO] Connection opened!");
 
@@ -382,13 +363,13 @@ namespace TasteFlow.Infrastructure.Repositories
                             LIMIT @pageSize OFFSET @offset";
 
                         Console.WriteLine($"[REPO] Executing SELECT (NO COUNT, NO ORDER BY)...");
-                        var selectCommand = new Npgsql.NpgsqlCommand(selectSql, connection);
+                        var selectCommand = new NpgsqlCommand(selectSql, connection);
                         selectCommand.Parameters.AddWithValue("pageSize", pageSize);
                         selectCommand.Parameters.AddWithValue("offset", offset);
                         selectCommand.CommandTimeout = 15;
 
                         var swQuery = Stopwatch.StartNew();
-                        using (var reader = await selectCommand.ExecuteReaderAsync())
+                        await using (var reader = await selectCommand.ExecuteReaderAsync())
                         {
                             Console.WriteLine($"[REPO] Reading results...");
                             while (await reader.ReadAsync())
