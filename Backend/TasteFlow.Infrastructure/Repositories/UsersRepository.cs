@@ -18,11 +18,13 @@ namespace TasteFlow.Infrastructure.Repositories
     {
         private readonly IEventLogger _eventLogger;
         private readonly TasteFlowContext _context;
+        private readonly string _connectionString;
 
-        public UsersRepository(TasteFlowContext context, IEventLogger eventLogger) : base(context)
+        public UsersRepository(TasteFlowContext context, IEventLogger eventLogger, Microsoft.Extensions.Configuration.IConfiguration configuration) : base(context)
         {
             _eventLogger = eventLogger;
             _context = context;
+            _connectionString = configuration.GetConnectionString("DefaultConnection");
         }
 
         public async Task<IEnumerable<Guid>> CreateUsersRangeAsync(IEnumerable<Users> users)
@@ -59,8 +61,7 @@ namespace TasteFlow.Infrastructure.Repositories
             {
                 Console.WriteLine($"[AUTH] Using ADO.NET for login: {email}");
                 
-                var connectionString = _context.Database.GetConnectionString();
-                using (var connection = new Npgsql.NpgsqlConnection(connectionString))
+                using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
                 {
                     await connection.OpenAsync();
                     Console.WriteLine($"[AUTH] Connection opened!");
@@ -74,7 +75,7 @@ namespace TasteFlow.Infrastructure.Repositories
                         connection);
                     
                     command.Parameters.AddWithValue("email", email);
-                    command.CommandTimeout = 10;
+                    command.CommandTimeout = 30;
 
                     Users user = null;
                     using (var reader = await command.ExecuteReaderAsync())
@@ -221,11 +222,9 @@ namespace TasteFlow.Infrastructure.Repositories
 
             try
             {
-                Console.WriteLine($"[REPO] Getting connection string...");
-                var connectionString = _context.Database.GetConnectionString();
-                Console.WriteLine($"[REPO] Connection string OK");
+                Console.WriteLine($"[REPO] Using IConfiguration connection string");
 
-                using (var connection = new Npgsql.NpgsqlConnection(connectionString))
+                using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
                 {
                     Console.WriteLine($"[REPO] Opening connection...");
                     await connection.OpenAsync();
@@ -234,7 +233,7 @@ namespace TasteFlow.Infrastructure.Repositories
                     var command = new Npgsql.NpgsqlCommand(
                         "SELECT \"Id\", \"Name\", \"EmailAddress\" FROM \"Users\" WHERE NOT \"IsDeleted\" LIMIT 10", 
                         connection);
-                    command.CommandTimeout = 10;
+                    command.CommandTimeout = 30;
 
                     Console.WriteLine($"[REPO] Executing query...");
                     using (var reader = await command.ExecuteReaderAsync())
@@ -256,6 +255,7 @@ namespace TasteFlow.Infrastructure.Repositories
             catch (Exception ex)
             {
                 Console.WriteLine($"[REPO ERROR] {ex.Message}");
+                Console.WriteLine($"[REPO ERROR] Stack: {ex.StackTrace}");
                 throw;
             }
 
