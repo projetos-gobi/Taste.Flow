@@ -16,8 +16,8 @@ namespace TasteFlow.Domain.Interfaces
         Task<bool> UpdateUserPasswordAsync(UserPasswordManagement userPasswordManagement, string newPassword);
         Task<IEnumerable<Guid>> CreateUsersRangeAsync(IEnumerable<Users> users);
         IQueryable<Users> GetUsersPaged();
-        Task<List<Users>> GetUsersPagedDirectAsync(int page, int pageSize, object filter = null);
-        Task<int> GetUsersCountDirectAsync(object filter = null);
+        Task<(List<Users> users, int totalCount)> GetUsersPagedWithCountDirectAsync(int page, int pageSize, object filter = null);
+        Task<List<Users>> GetUsersPagedDirectAsync(int page, int pageSize, object filter = null); // Mantido para compatibilidade
         Task<bool> SoftDeleteUserAsync(Guid userId, Guid DeletedById);
         Task<Users> GetUserForUpdateByIdAsync(Guid id);
         Task<Users> GetUserByIdAsync(Guid id);

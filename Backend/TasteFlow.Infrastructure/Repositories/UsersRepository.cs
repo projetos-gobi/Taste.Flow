@@ -217,40 +217,46 @@ namespace TasteFlow.Infrastructure.Repositories
             return DbSet.FromSqlRaw(sql).AsNoTracking();
         }
 
-        public async Task<List<Users>> GetUsersPagedDirectAsync(int page, int pageSize, object filter = null)
+        public async Task<(List<Users> users, int totalCount)> GetUsersPagedWithCountDirectAsync(int page, int pageSize, object filter = null)
         {
             var users = new List<Users>();
+            int totalCount = 0;
 
             try
             {
-                Console.WriteLine($"[REPO] Starting GetUsersPagedDirectAsync - page: {page}, pageSize: {pageSize}");
+                Console.WriteLine($"[REPO] Starting GetUsersPagedWithCountDirectAsync - page: {page}, pageSize: {pageSize}");
 
+                // USAR MESMA CONEXÃO para COUNT e SELECT - evita problemas de concorrência
                 using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
                 {
                     Console.WriteLine($"[REPO] Opening connection...");
                     await connection.OpenAsync();
                     Console.WriteLine($"[REPO] Connection opened!");
 
-                    // Calcular OFFSET para paginação
+                    // PRIMEIRO: Fazer COUNT na mesma conexão
+                    Console.WriteLine($"[REPO] Executing COUNT...");
+                    var countSql = @"SELECT COUNT(*) FROM ""Users"" WHERE NOT ""IsDeleted""";
+                    var countCommand = new Npgsql.NpgsqlCommand(countSql, connection);
+                    countCommand.CommandTimeout = 30;
+                    totalCount = Convert.ToInt32(await countCommand.ExecuteScalarAsync());
+                    Console.WriteLine($"[REPO] Total count: {totalCount}");
+
+                    // SEGUNDO: Fazer SELECT na mesma conexão
                     var offset = (page - 1) * pageSize;
-                    
-                    // Query SQL simples - por enquanto ignorar filtros para resolver o problema de carregamento
-                    var sql = @"
+                    var selectSql = @"
                         SELECT ""Id"", ""Name"", ""EmailAddress"" 
                         FROM ""Users"" 
                         WHERE NOT ""IsDeleted"" 
                         ORDER BY ""Name"" 
                         LIMIT @pageSize OFFSET @offset";
 
-                    Console.WriteLine($"[REPO] SQL: {sql} (pageSize: {pageSize}, offset: {offset})");
+                    Console.WriteLine($"[REPO] Executing SELECT...");
+                    var selectCommand = new Npgsql.NpgsqlCommand(selectSql, connection);
+                    selectCommand.Parameters.AddWithValue("pageSize", pageSize);
+                    selectCommand.Parameters.AddWithValue("offset", offset);
+                    selectCommand.CommandTimeout = 30;
 
-                    var command = new Npgsql.NpgsqlCommand(sql, connection);
-                    command.Parameters.AddWithValue("pageSize", pageSize);
-                    command.Parameters.AddWithValue("offset", offset);
-                    command.CommandTimeout = 30;
-
-                    Console.WriteLine($"[REPO] Executing query...");
-                    using (var reader = await command.ExecuteReaderAsync())
+                    using (var reader = await selectCommand.ExecuteReaderAsync())
                     {
                         Console.WriteLine($"[REPO] Reading results...");
                         while (await reader.ReadAsync())
@@ -273,39 +279,14 @@ namespace TasteFlow.Infrastructure.Repositories
                 throw;
             }
 
-            return users;
+            return (users, totalCount);
         }
 
-        public async Task<int> GetUsersCountDirectAsync(object filter = null)
+        // Método mantido para compatibilidade - delega para o novo método
+        public async Task<List<Users>> GetUsersPagedDirectAsync(int page, int pageSize, object filter = null)
         {
-            try
-            {
-                Console.WriteLine($"[REPO] Starting GetUsersCountDirectAsync");
-
-                using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-
-                    // Query COUNT super simples - mesma condição da query principal
-                    var sql = @"SELECT COUNT(*) FROM ""Users"" WHERE NOT ""IsDeleted""";
-
-                    Console.WriteLine($"[REPO] COUNT SQL: {sql}");
-
-                    var command = new Npgsql.NpgsqlCommand(sql, connection);
-                    command.CommandTimeout = 30;
-
-                    var count = Convert.ToInt32(await command.ExecuteScalarAsync());
-                    Console.WriteLine($"[REPO] Total count: {count}");
-                    
-                    return count;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[REPO COUNT ERROR] {ex.Message}");
-                Console.WriteLine($"[REPO COUNT ERROR] Stack: {ex.StackTrace}");
-                throw;
-            }
+            var (users, _) = await GetUsersPagedWithCountDirectAsync(page, pageSize, filter);
+            return users;
         }
 
         public async Task<bool> RecoverPasswordAsync(UserPasswordManagement userPasswordManagement, string newPassword)
