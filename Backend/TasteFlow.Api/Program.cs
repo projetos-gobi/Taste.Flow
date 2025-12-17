@@ -53,8 +53,6 @@ void ConfigureServices(WebApplicationBuilder builder)
             options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
         });
 
-    builder.Services.AddMediatR(cfg => { cfg.RegisterServicesFromAssemblies(typeof(Program).Assembly); });
-
     builder.Services.AddAntiforgery(x =>
     {
         x.SuppressXFrameOptionsHeader = true;
