@@ -32,6 +32,7 @@ namespace TasteFlow.Application.Users.Handlers
         {
             try
             {
+                Console.WriteLine("[HANDLER] Starting GetUsersPaged...");
                 var query = _usersRepository.GetUsersPaged();
 
                 if (request.Filter.AccessProfileId.HasValue)
@@ -49,6 +50,7 @@ namespace TasteFlow.Application.Users.Handlers
                 if (request.Filter.IsActive.HasValue)
                     query = query.Where(e => e.IsActive == request.Filter.IsActive);
 
+                Console.WriteLine("[HANDLER] Executing SELECT...");
                 // Executar SELECT primeiro (mais rápido)
                 var result = await query
                     .OrderBy(x => x.CreatedOn)
@@ -56,17 +58,28 @@ namespace TasteFlow.Application.Users.Handlers
                     .Take(request.Query.PageSize)
                     .ToListAsync(cancellationToken);
 
+                Console.WriteLine($"[HANDLER] SELECT returned {result.Count} users");
+
+                Console.WriteLine("[HANDLER] Executing COUNT...");
                 // COUNT simplificado - apenas contar Users sem os JOINs pesados
                 var totalCount = await _usersRepository.GetAllNoTracking()
                     .Where(x => !x.IsDeleted)
                     .CountAsync(cancellationToken);
 
+                Console.WriteLine($"[HANDLER] COUNT returned {totalCount}");
+
+                Console.WriteLine("[HANDLER] Mapping results...");
                 var response = _mapper.Map<List<GetUsersPagedResponse>>(result);
 
+                Console.WriteLine($"[HANDLER] Mapped {response.Count} items");
+
+                Console.WriteLine("[HANDLER] Returning PagedResult...");
                 return new PagedResult<GetUsersPagedResponse>(totalCount, response, request.Query.Page, request.Query.PageSize);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[HANDLER ERROR] {ex.Message}");
+                Console.WriteLine($"[HANDLER ERROR] Stack: {ex.StackTrace}");
                 var message = $"Ocorreu um erro durante o processo paginação de usuários.";
 
                 //_eventLogger.Log(LogTypeEnum.Error, ex, message);
