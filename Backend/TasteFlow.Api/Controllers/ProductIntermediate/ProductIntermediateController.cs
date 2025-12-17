@@ -31,7 +31,7 @@ namespace TasteFlow.Api.Controllers.ProductIntermediate
             try
             {
                 var command = _mapper.Map<CreateProductIntermediateCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -51,7 +51,7 @@ namespace TasteFlow.Api.Controllers.ProductIntermediate
             try
             {
                 var query = _mapper.Map<GetProductIntermediatesPagedQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -71,7 +71,7 @@ namespace TasteFlow.Api.Controllers.ProductIntermediate
             try
             {
                 var query = _mapper.Map<GetProductIntermediateByIdQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -91,7 +91,7 @@ namespace TasteFlow.Api.Controllers.ProductIntermediate
             try
             {
                 var command = _mapper.Map<UpdateProductIntermediateCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -111,7 +111,7 @@ namespace TasteFlow.Api.Controllers.ProductIntermediate
             try
             {
                 var command = _mapper.Map<SoftDeleteProductIntermediateCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -131,7 +131,7 @@ namespace TasteFlow.Api.Controllers.ProductIntermediate
             try
             {
                 var query = _mapper.Map<GetAllProductIntermediatesByEnterpriseIdQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 

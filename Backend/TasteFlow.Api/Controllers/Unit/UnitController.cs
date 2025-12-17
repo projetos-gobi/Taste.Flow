@@ -31,7 +31,7 @@ namespace TasteFlow.Api.Controllers.Unit
             try
             {
                 var command = _mapper.Map<CreateUnitsRangeCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -51,7 +51,7 @@ namespace TasteFlow.Api.Controllers.Unit
             try
             {
                 var query = _mapper.Map<GetUnitsPagedQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -71,7 +71,7 @@ namespace TasteFlow.Api.Controllers.Unit
             try
             {
                 var query = _mapper.Map<GetUnitByIdQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -91,7 +91,7 @@ namespace TasteFlow.Api.Controllers.Unit
             try
             {
                 var command = _mapper.Map<UpdateUnitCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -111,7 +111,7 @@ namespace TasteFlow.Api.Controllers.Unit
             try
             {
                 var command = _mapper.Map<SoftDeleteUnitCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -131,7 +131,7 @@ namespace TasteFlow.Api.Controllers.Unit
             try
             {
                 var query = _mapper.Map<GetAllUnitsByEnterpriseIdQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -151,7 +151,7 @@ namespace TasteFlow.Api.Controllers.Unit
             try
             {
                 var query = _mapper.Map<CheckUnitsExistQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 

@@ -19,7 +19,7 @@ COPY . .
 
 # Build e publicar
 WORKDIR /src/TasteFlow.Api
-RUN dotnet publish -c Release -o /app
+RUN dotnet publish -c Release -o /app /p:TreatWarningsAsErrors=false
 
 # Imagem final
 FROM mcr.microsoft.com/dotnet/aspnet:8.0

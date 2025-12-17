@@ -31,7 +31,7 @@ namespace TasteFlow.Api.Controllers.SubCategory
             try
             {
                 var command = _mapper.Map<CreateSubCategoriesRangeCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -51,7 +51,7 @@ namespace TasteFlow.Api.Controllers.SubCategory
             try
             {
                 var query = _mapper.Map<GetSubCategoriesPagedQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -71,7 +71,7 @@ namespace TasteFlow.Api.Controllers.SubCategory
             try
             {
                 var query = _mapper.Map<GetSubCategoryByIdQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -91,7 +91,7 @@ namespace TasteFlow.Api.Controllers.SubCategory
             try
             {
                 var command = _mapper.Map<UpdateSubCategoryCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -111,7 +111,7 @@ namespace TasteFlow.Api.Controllers.SubCategory
             try
             {
                 var command = _mapper.Map<SoftDeleteSubCategoryCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -131,7 +131,7 @@ namespace TasteFlow.Api.Controllers.SubCategory
             try
             {
                 var query = _mapper.Map<GetAllSubCategoriesByEnterpriseIdQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -151,7 +151,7 @@ namespace TasteFlow.Api.Controllers.SubCategory
             try
             {
                 var query = _mapper.Map<CheckSubCategoriesExistQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 

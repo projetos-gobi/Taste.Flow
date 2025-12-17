@@ -61,7 +61,7 @@ namespace TasteFlow.Api.Controllers.Authentication
                     Console.WriteLine($"[DEBUG] Token empty. Status: {result.AuthenticationStatus}");
 
                     // NÃO retornar 401 quando for erro interno/infra (ex.: banco instável).
-                    if (result.AuthenticationStatus == AuthenticationStatusEnum.Error)
+                    if (result.AuthenticationStatus == AuthenticationStatusEnum.Error.Name)
                         return StatusCode(StatusCodes.Status503ServiceUnavailable, "Serviço temporariamente indisponível. Tente novamente.");
 
                     return Unauthorized();

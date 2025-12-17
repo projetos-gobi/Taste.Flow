@@ -30,7 +30,7 @@ namespace TasteFlow.Api.Controllers.ProductAlternative
             try
             {
                 var query = _mapper.Map<GetAllProductAlternativesByProductIdQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 

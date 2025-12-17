@@ -31,7 +31,7 @@ namespace TasteFlow.Api.Controllers.ProductType
             try
             {
                 var command = _mapper.Map<CreateProductTypesRangeCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -51,7 +51,7 @@ namespace TasteFlow.Api.Controllers.ProductType
             try
             {
                 var query = _mapper.Map<GetProductTypesPagedQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -71,7 +71,7 @@ namespace TasteFlow.Api.Controllers.ProductType
             try
             {
                 var query = _mapper.Map<GetProductTypeByIdQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -91,7 +91,7 @@ namespace TasteFlow.Api.Controllers.ProductType
             try
             {
                 var command = _mapper.Map<UpdateProductTypeCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -111,7 +111,7 @@ namespace TasteFlow.Api.Controllers.ProductType
             try
             {
                 var command = _mapper.Map<SoftDeleteProductTypeCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -131,7 +131,7 @@ namespace TasteFlow.Api.Controllers.ProductType
             try
             {
                 var query = _mapper.Map<GetAllProductTypesByEnterpriseIdQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -151,7 +151,7 @@ namespace TasteFlow.Api.Controllers.ProductType
             try
             {
                 var query = _mapper.Map<CheckProductTypesExistQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 

@@ -18,9 +18,22 @@ namespace TasteFlow.Api.Controllers.Base
             }
         }
 
-        protected new IActionResult Response(object? resultData = null, List<ValidationResult> validations = null)
+        // Evita CS8629 nos controllers e garante validação centralizada do claim
+        protected Guid EnterpriseIdValue
         {
-            if (validations == null || validations != null && validations.Count == 0)
+            get
+            {
+                var enterpriseId = EnterpriseId;
+                if (!enterpriseId.HasValue)
+                    throw new ValidationException("EnterpriseId não informado no token (claim enterpriseId).");
+
+                return enterpriseId.Value;
+            }
+        }
+
+        protected new IActionResult Response(object? resultData = null, List<ValidationResult>? validations = null)
+        {
+            if (validations == null || validations.Count == 0)
             {
                 return Ok(
                     new ResponseMessage<object>
@@ -35,7 +48,7 @@ namespace TasteFlow.Api.Controllers.Base
                     new ResponseMessage<object>
                     {
                         Success = false,
-                        Errors = validations.Select(x => x.ErrorMessage),
+                        Errors = validations.Select(x => x.ErrorMessage ?? string.Empty),
                         Data = resultData
                     });
             }

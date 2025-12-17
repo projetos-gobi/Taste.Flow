@@ -32,7 +32,7 @@ namespace TasteFlow.Api.Controllers.Supplier
             try
             {
                 var command = _mapper.Map<CreateSupplierCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -52,7 +52,7 @@ namespace TasteFlow.Api.Controllers.Supplier
             try
             {
                 var query = _mapper.Map<GetSuppliersPagedQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -72,7 +72,7 @@ namespace TasteFlow.Api.Controllers.Supplier
             try
             {
                 var query = _mapper.Map<GetSupplierByIdQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -92,7 +92,7 @@ namespace TasteFlow.Api.Controllers.Supplier
             try
             {
                 var command = _mapper.Map<UpdateSupplierCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -112,7 +112,7 @@ namespace TasteFlow.Api.Controllers.Supplier
             try
             {
                 var command = _mapper.Map<SoftDeleteSupplierCommand>(request);
-                command.EnterpriseId = EnterpriseId.Value;
+                command.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(command);
 
@@ -132,7 +132,7 @@ namespace TasteFlow.Api.Controllers.Supplier
             try
             {
                 var query = _mapper.Map<GetAllSuppliersByEnterpriseIdQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
@@ -152,7 +152,7 @@ namespace TasteFlow.Api.Controllers.Supplier
             try
             {
                 var query = _mapper.Map<CheckSupplierExistQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 

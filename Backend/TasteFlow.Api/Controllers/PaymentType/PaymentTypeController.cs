@@ -30,7 +30,7 @@ namespace TasteFlow.Api.Controllers.PaymentType
             try
             {
                 var query = _mapper.Map<GetAllPaymentTypesByEnterpriseIdQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 

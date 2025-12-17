@@ -164,7 +164,7 @@ namespace TasteFlow.Api.Controllers.Enterprise
         {
             try
             {
-                var query = new GetEnterpriseDetailByIdQuery(EnterpriseId.Value);
+                var query = new GetEnterpriseDetailByIdQuery(EnterpriseIdValue);
 
                 var result = await _mediator.Send(query);
 

@@ -9,10 +9,10 @@ namespace TasteFlow.Infrastructure.Services
         /// Normaliza keywords que entram erradas via env/secret (ex.: "Min Pool Size"/"Max Pool Size")
         /// e quebram o parsing do Npgsql em runtime.
         /// </summary>
-        public static string Normalize(string connectionString)
+        public static string Normalize(string? connectionString)
         {
             if (string.IsNullOrWhiteSpace(connectionString))
-                return connectionString;
+                return connectionString ?? string.Empty;
 
             var parts = connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries);
             var kv = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

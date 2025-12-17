@@ -30,7 +30,7 @@ namespace TasteFlow.Api.Controllers.StockEntryAttachment
             try
             {
                 var query = _mapper.Map<GetFileUrlStockEntryAttachmentQuery>(request);
-                query.EnterpriseId = EnterpriseId.Value;
+                query.EnterpriseId = EnterpriseIdValue;
 
                 var result = await _mediator.Send(query);
 
