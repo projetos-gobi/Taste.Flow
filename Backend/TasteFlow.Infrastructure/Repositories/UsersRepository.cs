@@ -276,6 +276,38 @@ namespace TasteFlow.Infrastructure.Repositories
             return users;
         }
 
+        public async Task<int> GetUsersCountDirectAsync(object filter = null)
+        {
+            try
+            {
+                Console.WriteLine($"[REPO] Starting GetUsersCountDirectAsync");
+
+                using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+
+                    // Query COUNT super simples - mesma condição da query principal
+                    var sql = @"SELECT COUNT(*) FROM ""Users"" WHERE NOT ""IsDeleted""";
+
+                    Console.WriteLine($"[REPO] COUNT SQL: {sql}");
+
+                    var command = new Npgsql.NpgsqlCommand(sql, connection);
+                    command.CommandTimeout = 30;
+
+                    var count = Convert.ToInt32(await command.ExecuteScalarAsync());
+                    Console.WriteLine($"[REPO] Total count: {count}");
+                    
+                    return count;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[REPO COUNT ERROR] {ex.Message}");
+                Console.WriteLine($"[REPO COUNT ERROR] Stack: {ex.StackTrace}");
+                throw;
+            }
+        }
+
         public async Task<bool> RecoverPasswordAsync(UserPasswordManagement userPasswordManagement, string newPassword)
         {
             try

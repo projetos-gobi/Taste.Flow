@@ -39,9 +39,10 @@ namespace TasteFlow.Application.Users.Handlers
 
                 Console.WriteLine($"[HANDLER] SELECT returned {result.Count} users");
 
-                // TEMPORÁRIO: usar o count dos resultados para não travar
-                var totalCount = result.Count;
-                Console.WriteLine($"[HANDLER] Using result count as total: {totalCount}");
+                // Buscar count total separadamente (query simples e rápida)
+                Console.WriteLine("[HANDLER] Getting total count...");
+                var totalCount = await _usersRepository.GetUsersCountDirectAsync(request.Filter);
+                Console.WriteLine($"[HANDLER] Total count: {totalCount}");
 
                 Console.WriteLine("[HANDLER] Mapping results...");
                 var response = _mapper.Map<List<GetUsersPagedResponse>>(result);

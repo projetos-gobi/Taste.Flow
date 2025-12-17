@@ -17,6 +17,7 @@ namespace TasteFlow.Domain.Interfaces
         Task<IEnumerable<Guid>> CreateUsersRangeAsync(IEnumerable<Users> users);
         IQueryable<Users> GetUsersPaged();
         Task<List<Users>> GetUsersPagedDirectAsync(int page, int pageSize, object filter = null);
+        Task<int> GetUsersCountDirectAsync(object filter = null);
         Task<bool> SoftDeleteUserAsync(Guid userId, Guid DeletedById);
         Task<Users> GetUserForUpdateByIdAsync(Guid id);
         Task<Users> GetUserByIdAsync(Guid id);
