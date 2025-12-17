@@ -61,6 +61,13 @@ namespace TasteFlow.Infrastructure.Repositories
             try
             {
                 Console.WriteLine($"[AUTH] Using ADO.NET for login: {email}");
+                Console.WriteLine($"[AUTH] Connection string is null: {_connectionString == null}");
+                
+                if (string.IsNullOrEmpty(_connectionString))
+                {
+                    Console.WriteLine($"[AUTH ERROR] Connection string is null or empty!");
+                    return null;
+                }
                 
                 using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
                 {

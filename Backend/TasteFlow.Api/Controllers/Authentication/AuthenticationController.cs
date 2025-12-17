@@ -45,15 +45,19 @@ namespace TasteFlow.Api.Controllers.Authentication
                 }
 
                 var query = _mapper.Map<AuthenticationQuery>(request);
+                Console.WriteLine($"[DEBUG] Sending authentication query to mediator...");
                 var result = await _mediator.Send(query);
+                Console.WriteLine($"[DEBUG] Authentication result - Token: {(string.IsNullOrEmpty(result.Token) ? "NULL" : "OK")}, Status: {result.Status}");
 
                 if (!String.IsNullOrEmpty(result.Token))
                 {
                     var response = _mapper.Map<AuthenticationResponse>(result);
+                    Console.WriteLine($"[DEBUG] Returning success response");
                     return Response(response);
                 }
                 else
                 {
+                    Console.WriteLine($"[DEBUG] Returning Unauthorized - Token is empty, Status: {result.Status}");
                     return Unauthorized();
                 }
             }
