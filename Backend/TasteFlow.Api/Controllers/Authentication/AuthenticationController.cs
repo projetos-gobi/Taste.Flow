@@ -31,6 +31,20 @@ namespace TasteFlow.Api.Controllers.Authentication
         {
             try
             {
+                Console.WriteLine($"[DEBUG] Login request received - Email: {request?.Email}, Password: {(request?.Password != null ? "***" : "null")}");
+                
+                if (request == null)
+                {
+                    Console.WriteLine("[DEBUG] Request is null!");
+                    return BadRequest("Request body is null");
+                }
+                
+                if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
+                {
+                    Console.WriteLine($"[DEBUG] Email or Password is null/empty - Email: {request.Email}, HasPassword: {!string.IsNullOrEmpty(request.Password)}");
+                    return BadRequest("Email and Password are required");
+                }
+                
                 var query = _mapper.Map<AuthenticationQuery>(request);
 
                 var result = await _mediator.Send(query);
