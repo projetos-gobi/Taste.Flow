@@ -45,7 +45,19 @@ namespace TasteFlow.Api.Controllers.Authentication
                     return BadRequest("Email and Password are required");
                 }
                 
-                var query = _mapper.Map<AuthenticationQuery>(request);
+                Console.WriteLine("[DEBUG] Attempting to map LoginRequest to AuthenticationQuery...");
+                AuthenticationQuery query;
+                try
+                {
+                    query = _mapper.Map<AuthenticationQuery>(request);
+                    Console.WriteLine("[DEBUG] Mapping successful!");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[DEBUG] Mapping failed! Error: {ex.Message}");
+                    Console.WriteLine($"[DEBUG] Stack trace: {ex.StackTrace}");
+                    return BadRequest($"Mapping error: {ex.Message}");
+                }
 
                 var result = await _mediator.Send(query);
 
