@@ -63,6 +63,8 @@ namespace TasteFlow.Infrastructure.Repositories
 
         public async Task<Users> GetAuthenticatedAccountAsync(string email, string password)
         {
+            // Postgres é case-sensitive por padrão; normalizar evita 401 intermitente (principalmente em mobile).
+            var normalizedEmail = (email ?? string.Empty).Trim().ToLowerInvariant();
             const int maxRetries = 2;
             var delayMs = 100;
 
@@ -80,11 +82,11 @@ namespace TasteFlow.Infrastructure.Repositories
                     await using var command = new NpgsqlCommand(
                         @"SELECT ""Id"", ""EmailAddress"", ""PasswordHash"", ""PasswordSalt"", ""Name"", ""AccessProfileId"", ""MustChangePassword""
                           FROM ""Users"" 
-                          WHERE ""EmailAddress"" = @email AND ""IsActive"" AND NOT ""IsDeleted""
+                          WHERE LOWER(""EmailAddress"") = @email AND ""IsActive"" AND NOT ""IsDeleted""
                           LIMIT 1",
                         connection);
 
-                    command.Parameters.AddWithValue("email", email);
+                    command.Parameters.AddWithValue("email", normalizedEmail);
                     command.CommandTimeout = 15;
 
                     Users user = null;
