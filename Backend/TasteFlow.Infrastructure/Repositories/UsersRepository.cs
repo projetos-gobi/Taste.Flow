@@ -199,6 +199,7 @@ namespace TasteFlow.Infrastructure.Repositories
 
         public IQueryable<Users> GetUsersPaged()
         {
+            // Query simplificada para evitar timeout no Supabase
             var result = GetAllNoTracking()
                 .Where(x => !x.IsDeleted)
                 .Select(x => new Users()
@@ -216,25 +217,19 @@ namespace TasteFlow.Infrastructure.Repositories
                         Id = x.AccessProfileId,
                         Name = x.AccessProfile.Name
                     },
-                    UserEnterprises = x.UserEnterprises.Select(ue => new UserEnterprise()
-                    {
-                        Id = ue.Id,
-                        LicenseManagement = ue.LicenseManagement != null ? new LicenseManagement()
+                    UserEnterprises = x.UserEnterprises
+                        .Where(ue => ue.IsActive && !ue.IsDeleted)
+                        .Select(ue => new UserEnterprise()
                         {
-                            Id = ue.LicenseManagement.Id,
-                            License = ue.LicenseManagement.License != null ? new License()
+                            Id = ue.Id,
+                            LicenseManagementId = ue.LicenseManagementId,
+                            Enterprise = new Enterprise()
                             {
-                                Id = ue.LicenseManagement.License.Id,
-                                Name = ue.LicenseManagement.License.Name
-                            } : null
-                        } : null,
-                        Enterprise = new Enterprise()
-                        {
-                            Id = ue.Enterprise.Id,
-                            FantasyName = ue.Enterprise.FantasyName,
-                            SocialReason = ue.Enterprise.SocialReason
-                        }
-                    }).ToList()
+                                Id = ue.Enterprise.Id,
+                                FantasyName = ue.Enterprise.FantasyName,
+                                SocialReason = ue.Enterprise.SocialReason
+                            }
+                        }).ToList()
                 });
 
             return result;
