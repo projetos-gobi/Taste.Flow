@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System;
 using System.Text;
 using TasteFlow.Domain.Interfaces;
 using TasteFlow.Domain.Interfaces.Common;
@@ -27,10 +28,24 @@ namespace TasteFlow.Infrastructure.Startup
             services.AddAuth(configuration);
 
             services.AddDbContext<TasteFlowContext>(options => 
+            {
                 options.UseNpgsql(
                     configuration.GetConnectionString("DefaultConnection"),
-                    npgsqlOptions => npgsqlOptions.CommandTimeout(120) // 120 segundos timeout
-                ));
+                    npgsqlOptions => 
+                    {
+                        npgsqlOptions.CommandTimeout(30); // 30 segundos timeout
+                        npgsqlOptions.EnableRetryOnFailure(
+                            maxRetryCount: 3,
+                            maxRetryDelay: TimeSpan.FromSeconds(5),
+                            errorCodesToAdd: null);
+                    });
+                
+                // OTIMIZAÇÕES para PostgreSQL
+                options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking); // Não rastrear por padrão
+                options.EnableSensitiveDataLogging(false); // Desabilitar logs sensíveis
+                options.EnableServiceProviderCaching(); // Cache do service provider
+                options.EnableDetailedErrors(false); // Desabilitar erros detalhados em produção
+            });
 
             services.InjectionDependency(configuration);
 
