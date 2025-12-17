@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +21,7 @@ namespace TasteFlow.Infrastructure.Repositories
         private readonly TasteFlowContext _context;
         private readonly string _connectionString;
 
-        public UsersRepository(TasteFlowContext context, IEventLogger eventLogger, Microsoft.Extensions.Configuration.IConfiguration configuration) : base(context)
+        public UsersRepository(TasteFlowContext context, IEventLogger eventLogger, IConfiguration configuration) : base(context)
         {
             _eventLogger = eventLogger;
             _context = context;
