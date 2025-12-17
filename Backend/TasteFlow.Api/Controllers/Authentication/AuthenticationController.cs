@@ -32,11 +32,8 @@ namespace TasteFlow.Api.Controllers.Authentication
         {
             try
             {
-                Console.WriteLine($"[DEBUG] Login request received - Email: {request?.Email}, Password: {(request?.Password != null ? "***" : "null")}");
-                
                 if (request == null)
                 {
-                    Console.WriteLine("[DEBUG] Request is null!");
                     return BadRequest("Request body is null");
                 }
                 
@@ -46,20 +43,15 @@ namespace TasteFlow.Api.Controllers.Authentication
                 }
 
                 var query = _mapper.Map<AuthenticationQuery>(request);
-                Console.WriteLine($"[DEBUG] Sending authentication query to mediator...");
                 var result = await _mediator.Send(query);
-                Console.WriteLine($"[DEBUG] Authentication result - Token: {(string.IsNullOrEmpty(result.Token) ? "NULL" : "OK")}, Status: {result.AuthenticationStatus}");
 
                 if (!String.IsNullOrEmpty(result.Token))
                 {
                     var response = _mapper.Map<AuthenticationResponse>(result);
-                    Console.WriteLine($"[DEBUG] Returning success response");
                     return Response(response);
                 }
                 else
                 {
-                    Console.WriteLine($"[DEBUG] Token empty. Status: {result.AuthenticationStatus}");
-
                     // NÃO retornar 401 quando for erro interno/infra (ex.: banco instável).
                     if (result.AuthenticationStatus == AuthenticationStatusEnum.Error.Name)
                         return StatusCode(StatusCodes.Status503ServiceUnavailable, "Serviço temporariamente indisponível. Tente novamente.");

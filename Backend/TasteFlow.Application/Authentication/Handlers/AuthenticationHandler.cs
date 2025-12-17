@@ -34,20 +34,14 @@ namespace TasteFlow.Application.Authentication.Handlers
 			try
 			{
                 var result = await _usersRepository.GetAuthenticatedAccountAsync(request.Email.Value, request.Password.Value);
-
-                Console.WriteLine($"[AUTH HANDLER] User found: {result != null}");
                 
                 if (result == null)
                 {
-                    Console.WriteLine($"[AUTH HANDLER] Returning UserNotFound");
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.UserNotFound, "Usuário não encontrado.");
                 }
                  
-                Console.WriteLine($"[AUTH HANDLER] Validating password for user: {result.EmailAddress}");
                 string passwordHash = request.Password.Value.ToSha256Hash(result.PasswordSalt);
                 
-                Console.WriteLine($"[AUTH HANDLER] Password hash match: {passwordHash == result.PasswordHash}");
-
                 if (passwordHash != result.PasswordHash)
                 {
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.InvalidCredentials, "Credenciais inválidas.");

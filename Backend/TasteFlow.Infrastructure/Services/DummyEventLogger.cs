@@ -8,15 +8,13 @@ namespace TasteFlow.Infrastructure.Services
     {
         public Guid Log(LogTypeEnum logType, Exception exception, string message)
         {
-            // Implementação vazia - apenas log no console
-            Console.WriteLine($"[DummyLogger] {logType}: {message} - {exception?.Message}");
+            // Implementação propositalmente vazia (evita impacto de I/O em stdout).
             return Guid.NewGuid();
         }
 
         public Guid Log(LogTypeEnum logType, string message)
         {
-            // Implementação vazia - apenas log no console
-            Console.WriteLine($"[DummyLogger] {logType}: {message}");
+            // Implementação propositalmente vazia (evita impacto de I/O em stdout).
             return Guid.NewGuid();
         }
     }

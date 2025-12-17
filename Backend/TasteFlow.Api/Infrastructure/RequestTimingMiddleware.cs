@@ -41,9 +41,10 @@ namespace TasteFlow.Api.Infrastructure
             }
             finally
             {
-                // Log final (mesmo em erro) para correlação com o traceId.
+                // Intencionalmente sem Console.WriteLine aqui:
+                // logs em stdout podem gerar backpressure no Fly e degradar latência.
+                // O diagnóstico principal fica via header Server-Timing + X-Request-Id.
                 sw.Stop();
-                Console.WriteLine($"[REQ] {context.Request.Method} {context.Request.Path} status={context.Response.StatusCode} elapsedMs={sw.ElapsedMilliseconds} traceId={traceId}");
             }
         }
     }

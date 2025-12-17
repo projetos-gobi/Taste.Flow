@@ -31,24 +31,15 @@ namespace TasteFlow.Application.Enterprise.Handlers
         {
             try
             {
-                Console.WriteLine("[HANDLER ENTERPRISE] Starting GetAllEnterprisesForUserRegistration...");
-                
                 // Repositório já calcula LicenseQuantity corretamente usando ADO.NET direto
                 var result = await _enterpriseRepository.GetAllEnterprisesForUserRegistrationAsync();
 
-                Console.WriteLine($"[HANDLER ENTERPRISE] Repository returned {result.Count()} enterprises");
-
                 var responses = _mapper.Map<IEnumerable<GetAllEnterprisesForUserRegistrationResponse>>(result);
-
-                Console.WriteLine($"[HANDLER ENTERPRISE] Mapped to {responses.Count()} responses");
 
                 return responses;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[HANDLER ENTERPRISE ERROR] {ex.Message}");
-                Console.WriteLine($"[HANDLER ENTERPRISE ERROR] Stack: {ex.StackTrace}");
-                
                 var message = $"Ocorreu um erro durante o processo de buscar empresas para cadastro de usuários.";
 
                 //_eventLogger.Log(LogTypeEnum.Error, ex, message);

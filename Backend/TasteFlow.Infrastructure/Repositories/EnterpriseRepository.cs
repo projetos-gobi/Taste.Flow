@@ -69,12 +69,8 @@ namespace TasteFlow.Infrastructure.Repositories
 
             try
             {
-                Console.WriteLine($"[REPO ENTERPRISE] Starting GetAllEnterprisesForUserRegistrationAsync using ADO.NET");
-
                 await using (var connection = await _dataSource.OpenConnectionAsync())
                 {
-                    Console.WriteLine($"[REPO ENTERPRISE] Connection opened!");
-
                     // Query SQL com subquery para contar licenças usadas
                     var sql = @"
                         SELECT 
@@ -95,8 +91,6 @@ namespace TasteFlow.Infrastructure.Repositories
                             ), 0) AS UsedLicenses
                         FROM ""Enterprise"" e
                         WHERE e.""IsActive"" AND NOT e.""IsDeleted""";
-
-                    Console.WriteLine($"[REPO ENTERPRISE] Executing query...");
 
                     var command = new NpgsqlCommand(sql, connection);
                     command.CommandTimeout = 30;
@@ -130,14 +124,10 @@ namespace TasteFlow.Infrastructure.Repositories
                             });
                         }
                     }
-
-                    Console.WriteLine($"[REPO ENTERPRISE] Found {enterprises.Count} enterprises!");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[REPO ENTERPRISE ERROR] {ex.Message}");
-                Console.WriteLine($"[REPO ENTERPRISE ERROR] Stack: {ex.StackTrace}");
                 return Enumerable.Empty<Enterprise>();
             }
 

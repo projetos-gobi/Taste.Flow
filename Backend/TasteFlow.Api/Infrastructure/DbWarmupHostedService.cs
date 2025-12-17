@@ -56,8 +56,6 @@ namespace TasteFlow.Api.Infrastructure
                 var swQuery = Stopwatch.StartNew();
                 await cmd.ExecuteScalarAsync(cancellationToken);
                 swQuery.Stop();
-
-                Console.WriteLine($"[WARMUP] DB warmup OK: openMs={swOpen.ElapsedMilliseconds} queryMs={swQuery.ElapsedMilliseconds}");
             }
             catch (Exception ex)
             {

@@ -63,8 +63,6 @@ namespace TasteFlow.Infrastructure.Repositories
 
         public async Task<Users> GetAuthenticatedAccountAsync(string email, string password)
         {
-            Console.WriteLine($"[AUTH] Using ADO.NET for login: {email}");
-
             const int maxRetries = 2;
             var delayMs = 100;
 
@@ -77,7 +75,6 @@ namespace TasteFlow.Infrastructure.Repositories
                     var swOpen = Stopwatch.StartNew();
                     await using var connection = await _dataSource.OpenConnectionAsync();
                     swOpen.Stop();
-                    Console.WriteLine($"[AUTH] Connection opened! attempt={attempt}/{maxRetries}");
 
                     await using var command = new NpgsqlCommand(
                         @"SELECT ""Id"", ""EmailAddress"", ""PasswordHash"", ""PasswordSalt"", ""Name"", ""AccessProfileId"", ""MustChangePassword""
@@ -110,22 +107,18 @@ namespace TasteFlow.Infrastructure.Repositories
                         }
                     }
                     swQuery.Stop();
-                    Console.WriteLine($"[AUTH] timings: openMs={swOpen.ElapsedMilliseconds} queryMs={swQuery.ElapsedMilliseconds}");
 
                     if (user == null)
                     {
-                        Console.WriteLine($"[AUTH] User not found for email: {email}");
                         return null;
                     }
 
                     user.UserEnterprises = new List<UserEnterprise>();
-                    Console.WriteLine($"[AUTH] User found, returning user");
                     return user;
                 }
                 catch (Exception ex) when (attempt < maxRetries && IsTransientDbException(ex))
                 {
                     lastEx = ex;
-                    Console.WriteLine($"[AUTH] Transient DB error on attempt {attempt}/{maxRetries}: {ex.Message}");
                     await Task.Delay(delayMs);
                     delayMs *= 2;
                 }
@@ -136,7 +129,6 @@ namespace TasteFlow.Infrastructure.Repositories
                 }
             }
 
-            Console.WriteLine($"[AUTH ERROR] Login failed after retries: {lastEx?.Message}");
             throw lastEx ?? new Exception("Falha ao autenticar usuário (erro desconhecido).");
         }
 
@@ -277,20 +269,14 @@ namespace TasteFlow.Infrastructure.Repositories
 
             try
             {
-                Console.WriteLine($"[REPO] Starting GetUsersPagedWithCountDirectAsync - page: {page}, pageSize: {pageSize}");
-
                 // USAR MESMA CONEXÃO para COUNT e SELECT - evita problemas de concorrência
                 await using (var connection = await _dataSource.OpenConnectionAsync())
                 {
-                    Console.WriteLine($"[REPO] Connection opened!");
-
                     // PRIMEIRO: Fazer COUNT na mesma conexão
-                    Console.WriteLine($"[REPO] Executing COUNT...");
                     var countSql = @"SELECT COUNT(*) FROM ""Users"" WHERE NOT ""IsDeleted""";
                     var countCommand = new NpgsqlCommand(countSql, connection);
                     countCommand.CommandTimeout = 30;
                     totalCount = Convert.ToInt32(await countCommand.ExecuteScalarAsync());
-                    Console.WriteLine($"[REPO] Total count: {totalCount}");
 
                     // SEGUNDO: Fazer SELECT na mesma conexão - QUERY ULTRA SIMPLES para testar
                     var offset = (page - 1) * pageSize;
@@ -301,7 +287,6 @@ namespace TasteFlow.Infrastructure.Repositories
                         WHERE NOT ""IsDeleted"" 
                         LIMIT @pageSize OFFSET @offset";
 
-                    Console.WriteLine($"[REPO] Executing SELECT (simplified, no ORDER BY)...");
                     var selectCommand = new NpgsqlCommand(selectSql, connection);
                     selectCommand.Parameters.AddWithValue("pageSize", pageSize);
                     selectCommand.Parameters.AddWithValue("offset", offset);
@@ -309,7 +294,6 @@ namespace TasteFlow.Infrastructure.Repositories
 
                     await using (var reader = await selectCommand.ExecuteReaderAsync())
                     {
-                        Console.WriteLine($"[REPO] Reading results...");
                         while (await reader.ReadAsync())
                         {
                             users.Add(new Users
@@ -320,13 +304,10 @@ namespace TasteFlow.Infrastructure.Repositories
                             });
                         }
                     }
-                    Console.WriteLine($"[REPO] Found {users.Count} users!");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[REPO ERROR] {ex.Message}");
-                Console.WriteLine($"[REPO ERROR] Stack: {ex.StackTrace}");
                 throw;
             }
 
@@ -346,14 +327,10 @@ namespace TasteFlow.Infrastructure.Repositories
                 try
                 {
                     users.Clear();
-                    Console.WriteLine($"[REPO] Starting GetUsersPagedDirectAsync (NO COUNT) - page: {page}, pageSize: {pageSize}, retry: {retryCount}");
-
                     var swOpen = Stopwatch.StartNew();
                     await using (var connection = await _dataSource.OpenConnectionAsync())
                     {
                         swOpen.Stop();
-                        Console.WriteLine($"[REPO] Connection opened!");
-
                         // APENAS SELECT - SEM COUNT
                         var offset = (page - 1) * pageSize;
                         var selectSql = @"
@@ -362,7 +339,6 @@ namespace TasteFlow.Infrastructure.Repositories
                             WHERE NOT ""IsDeleted"" 
                             LIMIT @pageSize OFFSET @offset";
 
-                        Console.WriteLine($"[REPO] Executing SELECT (NO COUNT, NO ORDER BY)...");
                         var selectCommand = new NpgsqlCommand(selectSql, connection);
                         selectCommand.Parameters.AddWithValue("pageSize", pageSize);
                         selectCommand.Parameters.AddWithValue("offset", offset);
@@ -371,7 +347,6 @@ namespace TasteFlow.Infrastructure.Repositories
                         var swQuery = Stopwatch.StartNew();
                         await using (var reader = await selectCommand.ExecuteReaderAsync())
                         {
-                            Console.WriteLine($"[REPO] Reading results...");
                             while (await reader.ReadAsync())
                             {
                                 users.Add(new Users
@@ -385,20 +360,15 @@ namespace TasteFlow.Infrastructure.Repositories
                             }
                         }
                         swQuery.Stop();
-                        Console.WriteLine($"[REPO] timings: openMs={swOpen.ElapsedMilliseconds} queryMs={swQuery.ElapsedMilliseconds}");
-                        Console.WriteLine($"[REPO] Found {users.Count} users!");
                         return users; // Sucesso - retornar
                     }
                 }
                 catch (Exception ex)
                 {
                     retryCount++;
-                    Console.WriteLine($"[REPO ERROR] Attempt {retryCount}/{maxRetries}: {ex.Message}");
                     
                     if (retryCount >= maxRetries)
                     {
-                        Console.WriteLine($"[REPO ERROR] Max retries reached. Returning empty list.");
-                        Console.WriteLine($"[REPO ERROR] Stack: {ex.StackTrace}");
                         return users; // Retornar lista vazia ao invés de throw
                     }
                     
