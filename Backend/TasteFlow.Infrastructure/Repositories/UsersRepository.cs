@@ -3,7 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
@@ -68,8 +71,8 @@ namespace TasteFlow.Infrastructure.Repositories
                 throw new InvalidOperationException("Connection string DefaultConnection não configurada.");
             }
 
-            const int maxRetries = 3;
-            var delayMs = 250;
+            const int maxRetries = 2;
+            var delayMs = 100;
 
             Exception lastEx = null;
 
@@ -79,7 +82,9 @@ namespace TasteFlow.Infrastructure.Repositories
                 {
                     using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
                     {
+                        var swOpen = Stopwatch.StartNew();
                         await connection.OpenAsync();
+                        swOpen.Stop();
                         Console.WriteLine($"[AUTH] Connection opened! attempt={attempt}/{maxRetries}");
 
                         var command = new Npgsql.NpgsqlCommand(
@@ -93,6 +98,7 @@ namespace TasteFlow.Infrastructure.Repositories
                         command.CommandTimeout = 15;
 
                         Users user = null;
+                        var swQuery = Stopwatch.StartNew();
                         using (var reader = await command.ExecuteReaderAsync())
                         {
                             if (await reader.ReadAsync())
@@ -111,6 +117,8 @@ namespace TasteFlow.Infrastructure.Repositories
                                 };
                             }
                         }
+                        swQuery.Stop();
+                        Console.WriteLine($"[AUTH] timings: openMs={swOpen.ElapsedMilliseconds} queryMs={swQuery.ElapsedMilliseconds}");
 
                         if (user == null)
                         {
@@ -145,8 +153,17 @@ namespace TasteFlow.Infrastructure.Repositories
         {
             if (ex == null) return false;
 
-            // Npgsql normalmente encapsula erros de rede/stream aqui (timeout, reset, etc)
-            if (ex.GetType().FullName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+            // Preferir sinalização do próprio driver
+            if (ex is Npgsql.NpgsqlException npgEx)
+                return npgEx.IsTransient;
+
+            if (ex is TimeoutException)
+                return true;
+
+            if (ex is IOException)
+                return true;
+
+            if (ex is SocketException)
                 return true;
 
             var msg = (ex.Message ?? string.Empty).ToLowerInvariant();
@@ -331,13 +348,14 @@ namespace TasteFlow.Infrastructure.Repositories
         public async Task<List<Users>> GetUsersPagedDirectAsync(int page, int pageSize, object filter = null)
         {
             var users = new List<Users>();
-            int maxRetries = 3;
-            int retryCount = 0;
+            const int maxRetries = 2;
+            var retryCount = 0;
 
             while (retryCount < maxRetries)
             {
                 try
                 {
+                    users.Clear();
                     Console.WriteLine($"[REPO] Starting GetUsersPagedDirectAsync (NO COUNT) - page: {page}, pageSize: {pageSize}, retry: {retryCount}");
 
                     if (string.IsNullOrEmpty(_connectionString))
@@ -349,7 +367,9 @@ namespace TasteFlow.Infrastructure.Repositories
                     using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
                     {
                         Console.WriteLine($"[REPO] Opening connection...");
+                        var swOpen = Stopwatch.StartNew();
                         await connection.OpenAsync();
+                        swOpen.Stop();
                         Console.WriteLine($"[REPO] Connection opened!");
 
                         // APENAS SELECT - SEM COUNT
@@ -364,8 +384,9 @@ namespace TasteFlow.Infrastructure.Repositories
                         var selectCommand = new Npgsql.NpgsqlCommand(selectSql, connection);
                         selectCommand.Parameters.AddWithValue("pageSize", pageSize);
                         selectCommand.Parameters.AddWithValue("offset", offset);
-                        selectCommand.CommandTimeout = 5; // Timeout curto
+                        selectCommand.CommandTimeout = 15;
 
+                        var swQuery = Stopwatch.StartNew();
                         using (var reader = await selectCommand.ExecuteReaderAsync())
                         {
                             Console.WriteLine($"[REPO] Reading results...");
@@ -381,6 +402,8 @@ namespace TasteFlow.Infrastructure.Repositories
                                 });
                             }
                         }
+                        swQuery.Stop();
+                        Console.WriteLine($"[REPO] timings: openMs={swOpen.ElapsedMilliseconds} queryMs={swQuery.ElapsedMilliseconds}");
                         Console.WriteLine($"[REPO] Found {users.Count} users!");
                         return users; // Sucesso - retornar
                     }
@@ -397,8 +420,11 @@ namespace TasteFlow.Infrastructure.Repositories
                         return users; // Retornar lista vazia ao invés de throw
                     }
                     
-                    // Aguardar antes de tentar novamente
-                    await Task.Delay(1000 * retryCount); // Backoff exponencial
+                    if (!IsTransientDbException(ex))
+                        return users;
+
+                    await Task.Delay(delayMs);
+                    delayMs *= 2;
                 }
             }
 
