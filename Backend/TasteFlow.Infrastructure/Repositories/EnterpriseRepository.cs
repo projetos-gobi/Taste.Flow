@@ -10,6 +10,7 @@ using TasteFlow.Domain.Entities;
 using TasteFlow.Domain.Interfaces;
 using TasteFlow.Domain.ValueObjects;
 using TasteFlow.Infrastructure.Repositories.Base;
+using TasteFlow.Infrastructure.Services;
 
 namespace TasteFlow.Infrastructure.Repositories
 {
@@ -21,7 +22,7 @@ namespace TasteFlow.Infrastructure.Repositories
         public EnterpriseRepository(TasteFlowContext context, IConfiguration configuration) : base(context)
         {
             _context = context;
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _connectionString = NpgsqlConnectionStringNormalizer.Normalize(configuration.GetConnectionString("DefaultConnection"));
         }
 
         public async Task<bool> CreateEnterpriseAsync(Enterprise enterprise)

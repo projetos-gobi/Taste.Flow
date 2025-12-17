@@ -11,6 +11,7 @@ using TasteFlow.Domain.Entities;
 using TasteFlow.Domain.Interfaces;
 using TasteFlow.Domain.Interfaces.Common;
 using TasteFlow.Infrastructure.Repositories.Base;
+using TasteFlow.Infrastructure.Services;
 using TasteFlow.Shared.Extensions;
 
 namespace TasteFlow.Infrastructure.Repositories
@@ -25,7 +26,7 @@ namespace TasteFlow.Infrastructure.Repositories
         {
             _eventLogger = eventLogger;
             _context = context;
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _connectionString = NpgsqlConnectionStringNormalizer.Normalize(configuration.GetConnectionString("DefaultConnection"));
         }
 
         public async Task<IEnumerable<Guid>> CreateUsersRangeAsync(IEnumerable<Users> users)
@@ -58,75 +59,102 @@ namespace TasteFlow.Infrastructure.Repositories
 
         public async Task<Users> GetAuthenticatedAccountAsync(string email, string password)
         {
-            try
+            Console.WriteLine($"[AUTH] Using ADO.NET for login: {email}");
+            Console.WriteLine($"[AUTH] Connection string is null: {_connectionString == null}");
+
+            if (string.IsNullOrWhiteSpace(_connectionString))
             {
-                Console.WriteLine($"[AUTH] Using ADO.NET for login: {email}");
-                Console.WriteLine($"[AUTH] Connection string is null: {_connectionString == null}");
-                
-                if (string.IsNullOrEmpty(_connectionString))
-                {
-                    Console.WriteLine($"[AUTH ERROR] Connection string is null or empty!");
-                    return null;
-                }
-                
-                using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
-                {
-                    await connection.OpenAsync();
-                    Console.WriteLine($"[AUTH] Connection opened!");
+                Console.WriteLine($"[AUTH ERROR] Connection string is null or empty!");
+                throw new InvalidOperationException("Connection string DefaultConnection não configurada.");
+            }
 
-                    // Buscar usuário
-                    var command = new Npgsql.NpgsqlCommand(
-                        @"SELECT ""Id"", ""EmailAddress"", ""PasswordHash"", ""PasswordSalt"", ""Name"", ""AccessProfileId"", ""MustChangePassword""
-                          FROM ""Users"" 
-                          WHERE ""EmailAddress"" = @email AND ""IsActive"" AND NOT ""IsDeleted""
-                          LIMIT 1", 
-                        connection);
-                    
-                    command.Parameters.AddWithValue("email", email);
-                    command.CommandTimeout = 30;
+            const int maxRetries = 3;
+            var delayMs = 250;
 
-                    Users user = null;
-                    using (var reader = await command.ExecuteReaderAsync())
+            Exception lastEx = null;
+
+            for (var attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
                     {
-                        if (await reader.ReadAsync())
+                        await connection.OpenAsync();
+                        Console.WriteLine($"[AUTH] Connection opened! attempt={attempt}/{maxRetries}");
+
+                        var command = new Npgsql.NpgsqlCommand(
+                            @"SELECT ""Id"", ""EmailAddress"", ""PasswordHash"", ""PasswordSalt"", ""Name"", ""AccessProfileId"", ""MustChangePassword""
+                              FROM ""Users"" 
+                              WHERE ""EmailAddress"" = @email AND ""IsActive"" AND NOT ""IsDeleted""
+                              LIMIT 1",
+                            connection);
+
+                        command.Parameters.AddWithValue("email", email);
+                        command.CommandTimeout = 15;
+
+                        Users user = null;
+                        using (var reader = await command.ExecuteReaderAsync())
                         {
-                            user = new Users
+                            if (await reader.ReadAsync())
                             {
-                                Id = reader.GetGuid(0),
-                                EmailAddress = reader.GetString(1),
-                                PasswordHash = reader.GetString(2),
-                                PasswordSalt = reader.GetString(3),
-                                Name = reader.GetString(4),
-                                AccessProfileId = reader.GetGuid(5),
-                                MustChangePassword = reader.GetBoolean(6),
-                                UserEnterprises = new List<UserEnterprise>(),
-                                UserPasswordManagements = new List<UserPasswordManagement>()
-                            };
+                                user = new Users
+                                {
+                                    Id = reader.GetGuid(0),
+                                    EmailAddress = reader.GetString(1),
+                                    PasswordHash = reader.GetString(2),
+                                    PasswordSalt = reader.GetString(3),
+                                    Name = reader.GetString(4),
+                                    AccessProfileId = reader.GetGuid(5),
+                                    MustChangePassword = reader.GetBoolean(6),
+                                    UserEnterprises = new List<UserEnterprise>(),
+                                    UserPasswordManagements = new List<UserPasswordManagement>()
+                                };
+                            }
                         }
+
+                        if (user == null)
+                        {
+                            Console.WriteLine($"[AUTH] User not found for email: {email}");
+                            return null;
+                        }
+
+                        user.UserEnterprises = new List<UserEnterprise>();
+                        Console.WriteLine($"[AUTH] User found, returning user");
+                        return user;
                     }
-
-                    if (user == null)
-                    {
-                        Console.WriteLine($"[AUTH] User not found for email: {email}");
-                        return null;
-                    }
-
-                    // REMOVIDO: Carregamento de UserEnterprises - não é necessário para login básico
-                    // A validação de licença será feita depois se necessário
-                    user.UserEnterprises = new List<UserEnterprise>();
-
-                    Console.WriteLine($"[AUTH] User found: {user != null}, returning user");
-                    return user;
+                }
+                catch (Exception ex) when (attempt < maxRetries && IsTransientDbException(ex))
+                {
+                    lastEx = ex;
+                    Console.WriteLine($"[AUTH] Transient DB error on attempt {attempt}/{maxRetries}: {ex.Message}");
+                    await Task.Delay(delayMs);
+                    delayMs *= 2;
+                }
+                catch (Exception ex)
+                {
+                    lastEx = ex;
+                    break;
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[AUTH ERROR] {ex.Message}");
-                var message = $"Ocorreu um erro durante a busca de um usuário no banco de dados: E-mail: {email}";
-                //_eventLogger.Log(LogTypeEnum.Error, ex, message);
 
-                return null;
-            }
+            Console.WriteLine($"[AUTH ERROR] Login failed after retries: {lastEx?.Message}");
+            throw lastEx ?? new Exception("Falha ao autenticar usuário (erro desconhecido).");
+        }
+
+        private static bool IsTransientDbException(Exception ex)
+        {
+            if (ex == null) return false;
+
+            // Npgsql normalmente encapsula erros de rede/stream aqui (timeout, reset, etc)
+            if (ex.GetType().FullName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+                return true;
+
+            var msg = (ex.Message ?? string.Empty).ToLowerInvariant();
+            return msg.Contains("timeout")
+                || msg.Contains("exception while reading from stream")
+                || msg.Contains("connection reset")
+                || msg.Contains("broken pipe")
+                || msg.Contains("connection refused");
         }
 
         public async Task<Users> GetUserByEmailAsync(string email)

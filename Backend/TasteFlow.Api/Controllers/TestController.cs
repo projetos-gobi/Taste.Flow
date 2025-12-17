@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
+using TasteFlow.Infrastructure.Services;
 
 namespace TasteFlow.Api.Controllers
 {
@@ -21,7 +22,7 @@ namespace TasteFlow.Api.Controllers
             {
                 Console.WriteLine("[TEST] Starting direct SQL test...");
                 
-                var connectionString = _configuration.GetConnectionString("DefaultConnection");
+                var connectionString = NpgsqlConnectionStringNormalizer.Normalize(_configuration.GetConnectionString("DefaultConnection"));
                 Console.WriteLine($"[TEST] Connection string: {connectionString}");
 
                 var users = new List<object>();

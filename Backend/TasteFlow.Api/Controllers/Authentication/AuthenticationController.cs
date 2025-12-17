@@ -7,6 +7,7 @@ using TasteFlow.Application.Authentication.Commands;
 using TasteFlow.Application.Authentication.Queries;
 using TasteFlow.Contracts.Authentication.Request;
 using TasteFlow.Contracts.Authentication.Response;
+using TasteFlow.Domain.Enums;
 
 namespace TasteFlow.Api.Controllers.Authentication
 {
@@ -57,7 +58,12 @@ namespace TasteFlow.Api.Controllers.Authentication
                 }
                 else
                 {
-                    Console.WriteLine($"[DEBUG] Returning Unauthorized - Token is empty, Status: {result.AuthenticationStatus}");
+                    Console.WriteLine($"[DEBUG] Token empty. Status: {result.AuthenticationStatus}");
+
+                    // NÃO retornar 401 quando for erro interno/infra (ex.: banco instável).
+                    if (result.AuthenticationStatus == AuthenticationStatusEnum.Error)
+                        return StatusCode(StatusCodes.Status503ServiceUnavailable, "Serviço temporariamente indisponível. Tente novamente.");
+
                     return Unauthorized();
                 }
             }
