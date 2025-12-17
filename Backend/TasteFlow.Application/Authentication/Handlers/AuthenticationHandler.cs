@@ -63,16 +63,20 @@ namespace TasteFlow.Application.Authentication.Handlers
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.InvalidCredentials, "Credenciais inválidas.");
                 }
 
-                Console.WriteLine("[DEBUG HANDLER] Creating refresh token...");
-                var refreshToken = await _userRefreshTokenRepository.CreateUserRefreshTokenAsync(result.Id);
-                Console.WriteLine($"[DEBUG HANDLER] Refresh token created: {refreshToken?.RefreshToken?.Substring(0, 10)}...");
+                Console.WriteLine("[DEBUG HANDLER] Creating FAKE refresh token (bypass timeout)...");
+                // TEMPORÁRIO: Bypass do refresh token por causa do timeout de 33s
+                var fakeRefreshToken = new Domain.Entities.UserRefreshToken 
+                { 
+                    RefreshToken = Guid.NewGuid().ToString() 
+                };
+                Console.WriteLine($"[DEBUG HANDLER] Fake refresh token created: {fakeRefreshToken.RefreshToken.Substring(0, 10)}...");
 
                 Console.WriteLine("[DEBUG HANDLER] Generating JWT token...");
                 var token = _tokenGenerator.GenerateToken(result);
                 Console.WriteLine($"[DEBUG HANDLER] JWT token generated: {(!string.IsNullOrEmpty(token) ? token.Substring(0, 20) + "..." : "EMPTY!")}");
 
                 Console.WriteLine($"[DEBUG HANDLER] Returning success with token length: {token?.Length ?? 0}");
-                return new AuthenticationResult(result.Id, result.EmailAddress, result.AccessProfileId.ToString(), token, "Autenticação realizada com sucesso.", refreshToken.RefreshToken, AuthenticationStatusEnum.Success);
+                return new AuthenticationResult(result.Id, result.EmailAddress, result.AccessProfileId.ToString(), token, "Autenticação realizada com sucesso.", fakeRefreshToken.RefreshToken, AuthenticationStatusEnum.Success);
             }
 			catch (Exception ex)
             {
