@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using TasteFlow.Api.Controllers.Base;
 using TasteFlow.Application.Users.Commands;
 using TasteFlow.Application.Users.Queries;
@@ -49,15 +50,15 @@ namespace TasteFlow.Api.Controllers.Users
         {
             try
             {
-                var swMap = System.Diagnostics.Stopwatch.StartNew();
+                var swMap = Stopwatch.StartNew();
                 var command = _mapper.Map<GetUsersPagedQuery>(request);
                 swMap.Stop();
-                TasteFlow.Api.Infrastructure.RequestTimings.Set("users_map", swMap.Elapsed.TotalMilliseconds);
+                Activity.Current?.SetTag("tf_users_map", swMap.Elapsed.TotalMilliseconds);
 
-                var swMediator = System.Diagnostics.Stopwatch.StartNew();
+                var swMediator = Stopwatch.StartNew();
                 var result = await _mediator.Send(command);
                 swMediator.Stop();
-                TasteFlow.Api.Infrastructure.RequestTimings.Set("users_mediator", swMediator.Elapsed.TotalMilliseconds);
+                Activity.Current?.SetTag("tf_users_mediator", swMediator.Elapsed.TotalMilliseconds);
 
                 return Response(result);
             }

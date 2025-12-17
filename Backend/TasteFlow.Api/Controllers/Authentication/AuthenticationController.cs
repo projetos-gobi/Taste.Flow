@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 using TasteFlow.Api.Controllers.Base;
 using TasteFlow.Application.Authentication.Commands;
 using TasteFlow.Application.Authentication.Queries;
@@ -42,22 +43,22 @@ namespace TasteFlow.Api.Controllers.Authentication
                     return BadRequest("Email and Password are required");
                 }
 
-                var swMapper = System.Diagnostics.Stopwatch.StartNew();
+                var swMapper = Stopwatch.StartNew();
                 var query = _mapper.Map<AuthenticationQuery>(request);
                 swMapper.Stop();
-                TasteFlow.Api.Infrastructure.RequestTimings.Set("auth_map", swMapper.Elapsed.TotalMilliseconds);
+                Activity.Current?.SetTag("tf_auth_map", swMapper.Elapsed.TotalMilliseconds);
 
-                var swMediator = System.Diagnostics.Stopwatch.StartNew();
+                var swMediator = Stopwatch.StartNew();
                 var result = await _mediator.Send(query);
                 swMediator.Stop();
-                TasteFlow.Api.Infrastructure.RequestTimings.Set("auth_mediator", swMediator.Elapsed.TotalMilliseconds);
+                Activity.Current?.SetTag("tf_auth_mediator", swMediator.Elapsed.TotalMilliseconds);
 
                 if (!String.IsNullOrEmpty(result.Token))
                 {
-                    var swRespMap = System.Diagnostics.Stopwatch.StartNew();
+                    var swRespMap = Stopwatch.StartNew();
                     var response = _mapper.Map<AuthenticationResponse>(result);
                     swRespMap.Stop();
-                    TasteFlow.Api.Infrastructure.RequestTimings.Set("auth_respmap", swRespMap.Elapsed.TotalMilliseconds);
+                    Activity.Current?.SetTag("tf_auth_respmap", swRespMap.Elapsed.TotalMilliseconds);
                     return Response(response);
                 }
                 else
