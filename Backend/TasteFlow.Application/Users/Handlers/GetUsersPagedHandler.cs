@@ -34,10 +34,12 @@ namespace TasteFlow.Application.Users.Handlers
                 Console.WriteLine("[HANDLER] Starting GetUsersPaged...");
 
                 // REMOVER COMPLETAMENTE Entity Framework - usar apenas ADO.NET direto
-                Console.WriteLine("[HANDLER] Executing SELECT + COUNT using ADO.NET direct (same connection)...");
-                var (result, totalCount) = await _usersRepository.GetUsersPagedWithCountDirectAsync(request.Query.Page, request.Query.PageSize, request.Filter);
+                // TEMPORÁRIO: Remover COUNT para priorizar velocidade - usar apenas SELECT
+                Console.WriteLine("[HANDLER] Executing SELECT using ADO.NET direct (COUNT disabled for speed)...");
+                var result = await _usersRepository.GetUsersPagedDirectAsync(request.Query.Page, request.Query.PageSize, request.Filter);
+                var totalCount = result.Count; // Usar count dos resultados por enquanto
 
-                Console.WriteLine($"[HANDLER] SELECT returned {result.Count} users, total count: {totalCount}");
+                Console.WriteLine($"[HANDLER] SELECT returned {result.Count} users");
 
                 Console.WriteLine("[HANDLER] Mapping results...");
                 var response = _mapper.Map<List<GetUsersPagedResponse>>(result);
