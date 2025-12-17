@@ -15,10 +15,12 @@ namespace TasteFlow.Infrastructure.Repositories
 {
     public class EnterpriseRepository : BaseRepository<Enterprise>, IEnterpriseRepository
     {
+        private readonly TasteFlowContext _context;
         private readonly string _connectionString;
 
         public EnterpriseRepository(TasteFlowContext context, IConfiguration configuration) : base(context)
         {
+            _context = context;
             _connectionString = configuration.GetConnectionString("DefaultConnection");
         }
 
