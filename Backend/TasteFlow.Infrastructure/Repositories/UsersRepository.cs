@@ -219,15 +219,15 @@ namespace TasteFlow.Infrastructure.Repositories
                     UserEnterprises = x.UserEnterprises.Select(ue => new UserEnterprise()
                     {
                         Id = ue.Id,
-                        LicenseManagement = new LicenseManagement()
+                        LicenseManagement = ue.LicenseManagement != null ? new LicenseManagement()
                         {
                             Id = ue.LicenseManagement.Id,
-                            License = new License()
+                            License = ue.LicenseManagement.License != null ? new License()
                             {
                                 Id = ue.LicenseManagement.License.Id,
                                 Name = ue.LicenseManagement.License.Name
-                            }
-                        },
+                            } : null
+                        } : null,
                         Enterprise = new Enterprise()
                         {
                             Id = ue.Enterprise.Id,
