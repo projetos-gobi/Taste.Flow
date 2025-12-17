@@ -2,6 +2,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.OpenApi.Models;
 using System.IO.Compression;
+using TasteFlow.Api.Infrastructure;
 using TasteFlow.Api.Mapping;
 using TasteFlow.Application.Startup;
 using TasteFlow.Infrastructure.Startup;
@@ -40,6 +41,7 @@ void ConfigureServices(WebApplicationBuilder builder)
 {
     builder.Services.AddMemoryCache();
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddHostedService<DbWarmupHostedService>();
     builder.Services.AddApplication();
     builder.Services.AddControllers()
         .AddJsonOptions(options =>

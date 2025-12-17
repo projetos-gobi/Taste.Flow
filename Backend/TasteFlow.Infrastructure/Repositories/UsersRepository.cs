@@ -350,6 +350,7 @@ namespace TasteFlow.Infrastructure.Repositories
             var users = new List<Users>();
             const int maxRetries = 2;
             var retryCount = 0;
+            var delayMs = 100;
 
             while (retryCount < maxRetries)
             {
