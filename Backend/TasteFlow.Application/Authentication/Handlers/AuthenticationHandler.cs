@@ -35,25 +35,18 @@ namespace TasteFlow.Application.Authentication.Handlers
 			{
                 var result = await _usersRepository.GetAuthenticatedAccountAsync(request.Email.Value, request.Password.Value);
 
+                Console.WriteLine($"[AUTH HANDLER] User found: {result != null}");
+                
                 if (result == null)
                 {
+                    Console.WriteLine($"[AUTH HANDLER] Returning UserNotFound");
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.UserNotFound, "Usuário não encontrado.");
                 }
                  
-                // Validar licença APENAS para usuários normais (não admin) E se UserEnterprises foi carregado
-                // Se UserEnterprises não foi carregado (timeout/erro), permitir login para não bloquear
-                if (result.AccessProfileId == AccessProfileEnum.User.Id && result.UserEnterprises != null && result.UserEnterprises.Any())
-                {
-                    var hasValidLicense = result.UserEnterprises.Any(ue => ue.LicenseManagement != null 
-                        && ue.LicenseManagement.IsActive && (ue.LicenseManagement.IsIndefinite || ue.LicenseManagement.ExpirationDate >= DateTime.UtcNow));
-                    
-                    if (!hasValidLicense)
-                    {
-                        return AuthenticationResult.Empty(AuthenticationStatusEnum.InvalidCredentials, "Credenciais inválidas.");
-                    }
-                }
-
+                Console.WriteLine($"[AUTH HANDLER] Validating password for user: {result.EmailAddress}");
                 string passwordHash = request.Password.Value.ToSha256Hash(result.PasswordSalt);
+                
+                Console.WriteLine($"[AUTH HANDLER] Password hash match: {passwordHash == result.PasswordHash}");
 
                 if (passwordHash != result.PasswordHash)
                 {
