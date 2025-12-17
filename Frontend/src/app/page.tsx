@@ -29,6 +29,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isPageLoaded, setIsPageLoaded] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const session = useSession();
   const router = useRouter();
@@ -47,6 +48,7 @@ export default function LoginPage() {
 
   const handleLogin = async  (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
     const request: ILoginRequest = { Email: email, Password: password };
 
@@ -89,6 +91,8 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       toast.error("Erro ao fazer login");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -168,9 +172,17 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full touch-button btn-hover-lift transition-smooth bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  disabled={isLoading}
+                  className="w-full touch-button btn-hover-lift transition-smooth bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Entrar
+                  {isLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Entrando...</span>
+                    </div>
+                  ) : (
+                    "Entrar"
+                  )}
                 </Button>
               </form>
             </div>
