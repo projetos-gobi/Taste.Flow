@@ -24,7 +24,7 @@ namespace TasteFlow.Infrastructure.Repositories
         {
             _eventLogger = eventLogger;
             _context = context;
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _connectionString = configuration["ConnectionStrings:DefaultConnection"];
         }
 
         public async Task<IEnumerable<Guid>> CreateUsersRangeAsync(IEnumerable<Users> users)
