@@ -42,12 +42,22 @@ namespace TasteFlow.Api.Controllers.Authentication
                     return BadRequest("Email and Password are required");
                 }
 
+                var swMapper = System.Diagnostics.Stopwatch.StartNew();
                 var query = _mapper.Map<AuthenticationQuery>(request);
+                swMapper.Stop();
+                TasteFlow.Api.Infrastructure.RequestTimings.Set("auth_map", swMapper.Elapsed.TotalMilliseconds);
+
+                var swMediator = System.Diagnostics.Stopwatch.StartNew();
                 var result = await _mediator.Send(query);
+                swMediator.Stop();
+                TasteFlow.Api.Infrastructure.RequestTimings.Set("auth_mediator", swMediator.Elapsed.TotalMilliseconds);
 
                 if (!String.IsNullOrEmpty(result.Token))
                 {
+                    var swRespMap = System.Diagnostics.Stopwatch.StartNew();
                     var response = _mapper.Map<AuthenticationResponse>(result);
+                    swRespMap.Stop();
+                    TasteFlow.Api.Infrastructure.RequestTimings.Set("auth_respmap", swRespMap.Elapsed.TotalMilliseconds);
                     return Response(response);
                 }
                 else

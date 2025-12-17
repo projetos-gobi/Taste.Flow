@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using TasteFlow.Domain.Entities;
 using TasteFlow.Domain.Interfaces;
 using TasteFlow.Domain.Interfaces.Common;
+using TasteFlow.Api.Infrastructure;
 using TasteFlow.Infrastructure.Repositories.Base;
 using TasteFlow.Infrastructure.Services;
 using TasteFlow.Shared.Extensions;
@@ -75,6 +76,7 @@ namespace TasteFlow.Infrastructure.Repositories
                     var swOpen = Stopwatch.StartNew();
                     await using var connection = await _dataSource.OpenConnectionAsync();
                     swOpen.Stop();
+                    RequestTimings.Set("auth_dbopen", swOpen.Elapsed.TotalMilliseconds);
 
                     await using var command = new NpgsqlCommand(
                         @"SELECT ""Id"", ""EmailAddress"", ""PasswordHash"", ""PasswordSalt"", ""Name"", ""AccessProfileId"", ""MustChangePassword""
@@ -107,6 +109,7 @@ namespace TasteFlow.Infrastructure.Repositories
                         }
                     }
                     swQuery.Stop();
+                    RequestTimings.Set("auth_dbquery", swQuery.Elapsed.TotalMilliseconds);
 
                     if (user == null)
                     {
@@ -331,6 +334,7 @@ namespace TasteFlow.Infrastructure.Repositories
                     await using (var connection = await _dataSource.OpenConnectionAsync())
                     {
                         swOpen.Stop();
+                        RequestTimings.Set("users_dbopen", swOpen.Elapsed.TotalMilliseconds);
                         // APENAS SELECT - SEM COUNT
                         var offset = (page - 1) * pageSize;
                         var selectSql = @"
@@ -360,6 +364,7 @@ namespace TasteFlow.Infrastructure.Repositories
                             }
                         }
                         swQuery.Stop();
+                        RequestTimings.Set("users_dbquery", swQuery.Elapsed.TotalMilliseconds);
                         return users; // Sucesso - retornar
                     }
                 }

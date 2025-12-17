@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
@@ -20,6 +21,7 @@ namespace TasteFlow.Api.Infrastructure
 
         public async Task Invoke(HttpContext context)
         {
+            RequestTimings.Reset();
             var sw = Stopwatch.StartNew();
             var traceId = context.TraceIdentifier;
 
@@ -30,7 +32,23 @@ namespace TasteFlow.Api.Infrastructure
                 var elapsedMs = sw.Elapsed.TotalMilliseconds;
 
                 context.Response.Headers["X-Request-Id"] = traceId;
-                context.Response.Headers["Server-Timing"] = $"app;dur={elapsedMs:0.##}";
+                var timings = RequestTimings.Snapshot();
+                if (timings.Count == 0)
+                {
+                    context.Response.Headers["Server-Timing"] = $"app;dur={elapsedMs:0.##}";
+                }
+                else
+                {
+                    // app sempre primeiro
+                    var parts = new List<string>(timings.Count + 1) { $"app;dur={elapsedMs:0.##}" };
+                    foreach (var kv in timings)
+                    {
+                        // evitar chaves muito longas ou com espaços
+                        var name = kv.Key.Replace(' ', '_');
+                        parts.Add($"{name};dur={kv.Value:0.##}");
+                    }
+                    context.Response.Headers["Server-Timing"] = string.Join(", ", parts);
+                }
 
                 return Task.CompletedTask;
             });

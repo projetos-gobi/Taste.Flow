@@ -40,7 +40,10 @@ namespace TasteFlow.Application.Authentication.Handlers
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.UserNotFound, "Usuário não encontrado.");
                 }
                  
+                var swHash = System.Diagnostics.Stopwatch.StartNew();
                 string passwordHash = request.Password.Value.ToSha256Hash(result.PasswordSalt);
+                swHash.Stop();
+                TasteFlow.Api.Infrastructure.RequestTimings.Set("auth_hash", swHash.Elapsed.TotalMilliseconds);
                 
                 if (passwordHash != result.PasswordHash)
                 {
@@ -48,7 +51,10 @@ namespace TasteFlow.Application.Authentication.Handlers
                 }
 
                 // Gerar token JWT primeiro
+                var swJwt = System.Diagnostics.Stopwatch.StartNew();
                 var token = _tokenGenerator.GenerateToken(result);
+                swJwt.Stop();
+                TasteFlow.Api.Infrastructure.RequestTimings.Set("auth_jwt", swJwt.Elapsed.TotalMilliseconds);
 
                 // Gerar refresh token localmente (não salvar no banco por enquanto para evitar bloqueio do DbContext)
                 var refreshTokenString = Guid.NewGuid().ToString();

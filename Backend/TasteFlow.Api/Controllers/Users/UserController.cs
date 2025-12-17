@@ -49,9 +49,15 @@ namespace TasteFlow.Api.Controllers.Users
         {
             try
             {
+                var swMap = System.Diagnostics.Stopwatch.StartNew();
                 var command = _mapper.Map<GetUsersPagedQuery>(request);
+                swMap.Stop();
+                TasteFlow.Api.Infrastructure.RequestTimings.Set("users_map", swMap.Elapsed.TotalMilliseconds);
 
+                var swMediator = System.Diagnostics.Stopwatch.StartNew();
                 var result = await _mediator.Send(command);
+                swMediator.Stop();
+                TasteFlow.Api.Infrastructure.RequestTimings.Set("users_mediator", swMediator.Elapsed.TotalMilliseconds);
 
                 return Response(result);
             }
