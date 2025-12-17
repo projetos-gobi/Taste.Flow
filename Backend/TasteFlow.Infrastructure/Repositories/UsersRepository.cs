@@ -334,58 +334,79 @@ namespace TasteFlow.Infrastructure.Repositories
             return (users, totalCount);
         }
 
-        // Método SEM COUNT - apenas SELECT rápido
+        // Método SEM COUNT - apenas SELECT rápido com retry logic
         public async Task<List<Users>> GetUsersPagedDirectAsync(int page, int pageSize, object filter = null)
         {
             var users = new List<Users>();
+            int maxRetries = 3;
+            int retryCount = 0;
 
-            try
+            while (retryCount < maxRetries)
             {
-                Console.WriteLine($"[REPO] Starting GetUsersPagedDirectAsync (NO COUNT) - page: {page}, pageSize: {pageSize}");
-
-                using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
+                try
                 {
-                    Console.WriteLine($"[REPO] Opening connection...");
-                    await connection.OpenAsync();
-                    Console.WriteLine($"[REPO] Connection opened!");
+                    Console.WriteLine($"[REPO] Starting GetUsersPagedDirectAsync (NO COUNT) - page: {page}, pageSize: {pageSize}, retry: {retryCount}");
 
-                    // APENAS SELECT - SEM COUNT
-                    var offset = (page - 1) * pageSize;
-                    var selectSql = @"
-                        SELECT ""Id"", ""Name"", ""EmailAddress"", ""AccessProfileId"", ""IsActive"" 
-                        FROM ""Users"" 
-                        WHERE NOT ""IsDeleted"" 
-                        LIMIT @pageSize OFFSET @offset";
-
-                    Console.WriteLine($"[REPO] Executing SELECT (NO COUNT, NO ORDER BY)...");
-                    var selectCommand = new Npgsql.NpgsqlCommand(selectSql, connection);
-                    selectCommand.Parameters.AddWithValue("pageSize", pageSize);
-                    selectCommand.Parameters.AddWithValue("offset", offset);
-                    selectCommand.CommandTimeout = 10;
-
-                    using (var reader = await selectCommand.ExecuteReaderAsync())
+                    if (string.IsNullOrEmpty(_connectionString))
                     {
-                        Console.WriteLine($"[REPO] Reading results...");
-                        while (await reader.ReadAsync())
-                        {
-                            users.Add(new Users
-                            {
-                                Id = reader.GetGuid(0),
-                                Name = reader.GetString(1),
-                                EmailAddress = reader.GetString(2),
-                                AccessProfileId = reader.GetGuid(3),
-                                IsActive = reader.GetBoolean(4)
-                            });
-                        }
+                        Console.WriteLine($"[REPO ERROR] Connection string is null or empty!");
+                        return users;
                     }
-                    Console.WriteLine($"[REPO] Found {users.Count} users!");
+
+                    using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
+                    {
+                        Console.WriteLine($"[REPO] Opening connection...");
+                        await connection.OpenAsync();
+                        Console.WriteLine($"[REPO] Connection opened!");
+
+                        // APENAS SELECT - SEM COUNT
+                        var offset = (page - 1) * pageSize;
+                        var selectSql = @"
+                            SELECT ""Id"", ""Name"", ""EmailAddress"", ""AccessProfileId"", ""IsActive"" 
+                            FROM ""Users"" 
+                            WHERE NOT ""IsDeleted"" 
+                            LIMIT @pageSize OFFSET @offset";
+
+                        Console.WriteLine($"[REPO] Executing SELECT (NO COUNT, NO ORDER BY)...");
+                        var selectCommand = new Npgsql.NpgsqlCommand(selectSql, connection);
+                        selectCommand.Parameters.AddWithValue("pageSize", pageSize);
+                        selectCommand.Parameters.AddWithValue("offset", offset);
+                        selectCommand.CommandTimeout = 5; // Timeout curto
+
+                        using (var reader = await selectCommand.ExecuteReaderAsync())
+                        {
+                            Console.WriteLine($"[REPO] Reading results...");
+                            while (await reader.ReadAsync())
+                            {
+                                users.Add(new Users
+                                {
+                                    Id = reader.GetGuid(0),
+                                    Name = reader.GetString(1),
+                                    EmailAddress = reader.GetString(2),
+                                    AccessProfileId = reader.GetGuid(3),
+                                    IsActive = reader.GetBoolean(4)
+                                });
+                            }
+                        }
+                        Console.WriteLine($"[REPO] Found {users.Count} users!");
+                        return users; // Sucesso - retornar
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[REPO ERROR] {ex.Message}");
-                Console.WriteLine($"[REPO ERROR] Stack: {ex.StackTrace}");
-                throw;
+                catch (Exception ex)
+                {
+                    retryCount++;
+                    Console.WriteLine($"[REPO ERROR] Attempt {retryCount}/{maxRetries}: {ex.Message}");
+                    
+                    if (retryCount >= maxRetries)
+                    {
+                        Console.WriteLine($"[REPO ERROR] Max retries reached. Returning empty list.");
+                        Console.WriteLine($"[REPO ERROR] Stack: {ex.StackTrace}");
+                        return users; // Retornar lista vazia ao invés de throw
+                    }
+                    
+                    // Aguardar antes de tentar novamente
+                    await Task.Delay(1000 * retryCount); // Backoff exponencial
+                }
             }
 
             return users;
