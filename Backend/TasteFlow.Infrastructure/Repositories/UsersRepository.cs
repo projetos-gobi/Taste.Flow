@@ -72,13 +72,13 @@ namespace TasteFlow.Infrastructure.Repositories
                         {
                             Id = ue.Id,
                             EnterpriseId = ue.EnterpriseId,
-                            LicenseManagement = new LicenseManagement()
+                            LicenseManagement = ue.LicenseManagement != null ? new LicenseManagement()
                             {
                                 Id = ue.LicenseManagement.Id,
                                 ExpirationDate = ue.LicenseManagement.ExpirationDate,
                                 IsIndefinite = ue.LicenseManagement.IsIndefinite,
                                 IsActive = ue.LicenseManagement.IsActive,
-                            }
+                            } : null
                         }).ToList(),
                         UserPasswordManagements = x.UserPasswordManagements.Where(upm => upm.IsActive && !upm.IsDeleted).Select(upm => new UserPasswordManagement()
                         {
