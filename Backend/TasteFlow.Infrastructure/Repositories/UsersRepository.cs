@@ -94,11 +94,6 @@ namespace TasteFlow.Infrastructure.Repositories
             catch (Exception ex)
             {
                 var message = $"Ocorreu um erro durante a busca de um usuário no banco de dados: E-mail: {email}";
-                Console.WriteLine($"[DEBUG REPO] EXCEPTION in GetAuthenticatedAccountAsync!");
-                Console.WriteLine($"[DEBUG REPO] Message: {ex.Message}");
-                Console.WriteLine($"[DEBUG REPO] InnerException: {ex.InnerException?.Message}");
-                Console.WriteLine($"[DEBUG REPO] StackTrace: {ex.StackTrace}");
-
                 //_eventLogger.Log(LogTypeEnum.Error, ex, message);
 
                 return null;

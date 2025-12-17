@@ -41,52 +41,25 @@ namespace TasteFlow.Api.Controllers.Authentication
                 
                 if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
                 {
-                    Console.WriteLine($"[DEBUG] Email or Password is null/empty - Email: {request.Email}, HasPassword: {!string.IsNullOrEmpty(request.Password)}");
                     return BadRequest("Email and Password are required");
                 }
-                
-                Console.WriteLine("[DEBUG] Attempting to map LoginRequest to AuthenticationQuery...");
-                AuthenticationQuery query;
-                try
-                {
-                    query = _mapper.Map<AuthenticationQuery>(request);
-                    Console.WriteLine("[DEBUG] Mapping successful!");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[DEBUG] Mapping failed! Error: {ex.Message}");
-                    Console.WriteLine($"[DEBUG] Stack trace: {ex.StackTrace}");
-                    return BadRequest($"Mapping error: {ex.Message}");
-                }
 
-                Console.WriteLine("[DEBUG] Sending query to MediatR...");
+                var query = _mapper.Map<AuthenticationQuery>(request);
                 var result = await _mediator.Send(query);
-                Console.WriteLine($"[DEBUG] MediatR result received - Token: {(!String.IsNullOrEmpty(result.Token) ? result.Token.Substring(0,20)+"..." : "Null/Empty")}");
-                Console.WriteLine($"[DEBUG] AuthenticationStatus: {result.AuthenticationStatus}");
 
                 if (!String.IsNullOrEmpty(result.Token))
                 {
-                    Console.WriteLine("[DEBUG] Token is present, mapping to response...");
                     var response = _mapper.Map<AuthenticationResponse>(result);
-                    Console.WriteLine($"[DEBUG] Response mapped - Token: {response.Token?.Substring(0,20)}..., Status: {response.AuthenticationStatus}");
-                    Console.WriteLine("[DEBUG] Calling Response() method...");
-
-                    var apiResponse = Response(response);
-                    Console.WriteLine($"[DEBUG] Response() returned: {apiResponse.GetType().Name}");
-                    return apiResponse;
+                    return Response(response);
                 }
                 else
                 {
-                    Console.WriteLine("[DEBUG] Token is null/empty, returning Unauthorized");
                     return Unauthorized();
                 }
             }
             catch(Exception ex)
             {
-                Console.WriteLine($"[DEBUG] OUTER EXCEPTION! Message: {ex.Message}");
-                Console.WriteLine($"[DEBUG] Exception Type: {ex.GetType().Name}");
-                Console.WriteLine($"[DEBUG] Stack trace: {ex.StackTrace}");
-                return BadRequest($"Error: {ex.Message}");
+                return StatusCode(500, "An error occurred during authentication");
             }
         }
 

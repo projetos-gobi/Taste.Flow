@@ -33,57 +33,48 @@ namespace TasteFlow.Application.Authentication.Handlers
         {
 			try
 			{
-                Console.WriteLine($"[DEBUG HANDLER] Looking for user with email: {request.Email.Value}");
                 var result = await _usersRepository.GetAuthenticatedAccountAsync(request.Email.Value, request.Password.Value);
 
                 if (result == null)
                 {
-                    Console.WriteLine("[DEBUG HANDLER] User NOT FOUND in database!");
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.UserNotFound, "Usuário não encontrado.");
                 }
-                
-                Console.WriteLine($"[DEBUG HANDLER] User FOUND! ID: {result.Id}, Email: {result.EmailAddress}");
-                Console.WriteLine($"[DEBUG HANDLER] Salt from DB: {result.PasswordSalt}");
-                Console.WriteLine($"[DEBUG HANDLER] Hash from DB: {result.PasswordHash}");
                  
                 if (result.AccessProfileId == AccessProfileEnum.User.Id && !result.UserEnterprises.Any(ue => ue.LicenseManagement != null 
                 && ue.LicenseManagement.IsActive && (ue.LicenseManagement.IsIndefinite || ue.LicenseManagement.ExpirationDate >= DateTime.UtcNow)))
                 {
-                    Console.WriteLine("[DEBUG HANDLER] License check failed!");
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.InvalidCredentials, "Credenciais inválidas.");
                 }
 
                 string passwordHash = request.Password.Value.ToSha256Hash(result.PasswordSalt);
-                Console.WriteLine($"[DEBUG HANDLER] Generated hash: {passwordHash}");
-                Console.WriteLine($"[DEBUG HANDLER] Hash match: {passwordHash == result.PasswordHash}");
 
                 if (passwordHash != result.PasswordHash)
                 {
-                    Console.WriteLine("[DEBUG HANDLER] PASSWORD MISMATCH!");
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.InvalidCredentials, "Credenciais inválidas.");
                 }
 
-                Console.WriteLine("[DEBUG HANDLER] Creating FAKE refresh token (bypass timeout)...");
-                // TEMPORÁRIO: Bypass do refresh token por causa do timeout de 33s
-                var fakeRefreshToken = new Domain.Entities.UserRefreshToken 
-                { 
-                    RefreshToken = Guid.NewGuid().ToString() 
-                };
-                Console.WriteLine($"[DEBUG HANDLER] Fake refresh token created: {fakeRefreshToken.RefreshToken.Substring(0, 10)}...");
-
-                Console.WriteLine("[DEBUG HANDLER] Generating JWT token...");
+                // Gerar token JWT primeiro
                 var token = _tokenGenerator.GenerateToken(result);
-                Console.WriteLine($"[DEBUG HANDLER] JWT token generated: {(!string.IsNullOrEmpty(token) ? token.Substring(0, 20) + "..." : "EMPTY!")}");
 
-                Console.WriteLine($"[DEBUG HANDLER] Returning success with token length: {token?.Length ?? 0}");
-                return new AuthenticationResult(result.Id, result.EmailAddress, result.AccessProfileId.ToString(), token, "Autenticação realizada com sucesso.", fakeRefreshToken.RefreshToken, AuthenticationStatusEnum.Success);
+                // Criar refresh token de forma assíncrona (fire-and-forget para evitar timeout)
+                var refreshTokenString = Guid.NewGuid().ToString();
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _userRefreshTokenRepository.CreateUserRefreshTokenAsync(result.Id);
+                    }
+                    catch
+                    {
+                        // Silenciar erro para não afetar o login
+                    }
+                });
+
+                return new AuthenticationResult(result.Id, result.EmailAddress, result.AccessProfileId.ToString(), token, "Autenticação realizada com sucesso.", refreshTokenString, AuthenticationStatusEnum.Success);
             }
 			catch (Exception ex)
             {
                 var message = $"Ocorreu um erro durante o login de um usuário: E-mail: {request.Email}";
-                Console.WriteLine($"[DEBUG HANDLER] EXCEPTION! {ex.Message}");
-                Console.WriteLine($"[DEBUG HANDLER] Stack: {ex.StackTrace}");
-
                 //_eventLogger.Log(LogTypeEnum.Error, ex, message);
 
                 return AuthenticationResult.Empty(AuthenticationStatusEnum.Error, "Ocorreu um erro ao processar a autenticação.");
