@@ -31,14 +31,8 @@ namespace TasteFlow.Application.Enterprise.Handlers
         {
             try
             {
+                // Repositório já calcula LicenseQuantity corretamente usando ADO.NET direto
                 var result = await _enterpriseRepository.GetAllEnterprisesForUserRegistrationAsync();
-
-                foreach (var enterprise in result)
-                {
-                    int usedLicenses = enterprise.UserEnterprises.Count(ue => ue.IsActive && !ue.IsDeleted && ue.LicenseManagementId.HasValue);
-
-                    enterprise.LicenseQuantity = (enterprise.HasUnlimitedLicenses) ? 1000 : (enterprise.LicenseQuantity ?? 0) - usedLicenses;
-                }
 
                 var responses = _mapper.Map<IEnumerable<GetAllEnterprisesForUserRegistrationResponse>>(result);
 

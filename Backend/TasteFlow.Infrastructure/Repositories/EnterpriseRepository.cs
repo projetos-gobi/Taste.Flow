@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,8 +15,11 @@ namespace TasteFlow.Infrastructure.Repositories
 {
     public class EnterpriseRepository : BaseRepository<Enterprise>, IEnterpriseRepository
     {
-        public EnterpriseRepository(TasteFlowContext context) : base(context)
+        private readonly string _connectionString;
+
+        public EnterpriseRepository(TasteFlowContext context, IConfiguration configuration) : base(context)
         {
+            _connectionString = configuration.GetConnectionString("DefaultConnection");
         }
 
         public async Task<bool> CreateEnterpriseAsync(Enterprise enterprise)
@@ -57,42 +61,84 @@ namespace TasteFlow.Infrastructure.Repositories
 
         public async Task<IEnumerable<Enterprise>> GetAllEnterprisesForUserRegistrationAsync()
         {
+            var enterprises = new List<Enterprise>();
+
             try
             {
-                var result = await DbSet
-                    .Where(x => x.IsActive && !x.IsDeleted)
-                    .Select(x => new Enterprise()
-                    {
-                        Id = x.Id,
-                        LicenseId = x.LicenseId,
-                        FantasyName = x.FantasyName,
-                        SocialReason = x.SocialReason,
-                        Cnpj = x.Cnpj,
-                        LicenseQuantity = x.LicenseQuantity,
-                        HasUnlimitedLicenses = x.HasUnlimitedLicenses,
-                        LicenseManagements = x.LicenseManagements.Where(lm => lm.IsActive && !lm.IsDeleted)
-                        .Select(lm => new LicenseManagement
-                        {
-                            Id = lm.Id,
-                            LicenseId = lm.LicenseId,
-                            EnterpriseId = lm.EnterpriseId,
-                            LicenseCode = lm.LicenseCode,
-                            IsDeleted = lm.IsDeleted,
-                            IsActive = lm.IsActive
-                        }).ToList(),
-                        UserEnterprises = x.UserEnterprises.Where(ue => ue.IsActive && !ue.IsDeleted).ToList()
-                    }).AsNoTracking().ToListAsync();
+                Console.WriteLine($"[REPO ENTERPRISE] Starting GetAllEnterprisesForUserRegistrationAsync using ADO.NET");
 
-                return result;
+                using (var connection = new Npgsql.NpgsqlConnection(_connectionString))
+                {
+                    await connection.OpenAsync();
+                    Console.WriteLine($"[REPO ENTERPRISE] Connection opened!");
+
+                    // Query SQL com subquery para contar licenças usadas
+                    var sql = @"
+                        SELECT 
+                            e.""Id"", 
+                            e.""LicenseId"", 
+                            e.""FantasyName"", 
+                            e.""SocialReason"", 
+                            e.""Cnpj"", 
+                            e.""LicenseQuantity"", 
+                            e.""HasUnlimitedLicenses"",
+                            COALESCE((
+                                SELECT COUNT(*) 
+                                FROM ""UserEnterprise"" ue
+                                WHERE ue.""EnterpriseId"" = e.""Id""
+                                AND ue.""IsActive"" 
+                                AND NOT ue.""IsDeleted"" 
+                                AND ue.""LicenseManagementId"" IS NOT NULL
+                            ), 0) AS UsedLicenses
+                        FROM ""Enterprise"" e
+                        WHERE e.""IsActive"" AND NOT e.""IsDeleted""";
+
+                    Console.WriteLine($"[REPO ENTERPRISE] Executing query...");
+
+                    var command = new Npgsql.NpgsqlCommand(sql, connection);
+                    command.CommandTimeout = 30;
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var licenseQuantity = reader.IsDBNull(reader.GetOrdinal("LicenseQuantity")) 
+                                ? (int?)null 
+                                : reader.GetInt32(reader.GetOrdinal("LicenseQuantity"));
+                            var hasUnlimitedLicenses = reader.GetBoolean(reader.GetOrdinal("HasUnlimitedLicenses"));
+                            var usedLicenses = reader.GetInt32(reader.GetOrdinal("UsedLicenses"));
+
+                            enterprises.Add(new Enterprise
+                            {
+                                Id = reader.GetGuid(reader.GetOrdinal("Id")),
+                                LicenseId = reader.IsDBNull(reader.GetOrdinal("LicenseId")) 
+                                    ? (Guid?)null 
+                                    : reader.GetGuid(reader.GetOrdinal("LicenseId")),
+                                FantasyName = reader.GetString(reader.GetOrdinal("FantasyName")),
+                                SocialReason = reader.IsDBNull(reader.GetOrdinal("SocialReason")) 
+                                    ? null 
+                                    : reader.GetString(reader.GetOrdinal("SocialReason")),
+                                Cnpj = reader.IsDBNull(reader.GetOrdinal("Cnpj")) 
+                                    ? null 
+                                    : reader.GetString(reader.GetOrdinal("Cnpj")),
+                                LicenseQuantity = hasUnlimitedLicenses ? 1000 : (licenseQuantity ?? 0) - usedLicenses,
+                                HasUnlimitedLicenses = hasUnlimitedLicenses,
+                                UserEnterprises = new List<UserEnterprise>() // Lista vazia - não precisa para o response
+                            });
+                        }
+                    }
+
+                    Console.WriteLine($"[REPO ENTERPRISE] Found {enterprises.Count} enterprises!");
+                }
             }
             catch (Exception ex)
             {
-                var message = $"Ocorreu um erro ao buscar empresas para cadastro de usuários.";
-
-                //_eventLogger.Log(LogTypeEnum.Error, ex, message);
-
+                Console.WriteLine($"[REPO ENTERPRISE ERROR] {ex.Message}");
+                Console.WriteLine($"[REPO ENTERPRISE ERROR] Stack: {ex.StackTrace}");
                 return Enumerable.Empty<Enterprise>();
             }
+
+            return enterprises;
         }
 
         public async Task<Enterprise> GetEnterpriseByIdAsync(Guid id)
