@@ -63,10 +63,15 @@ namespace TasteFlow.Application.Authentication.Handlers
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.InvalidCredentials, "Credenciais inválidas.");
                 }
 
+                Console.WriteLine("[DEBUG HANDLER] Creating refresh token...");
                 var refreshToken = await _userRefreshTokenRepository.CreateUserRefreshTokenAsync(result.Id);
+                Console.WriteLine($"[DEBUG HANDLER] Refresh token created: {refreshToken?.RefreshToken?.Substring(0, 10)}...");
 
+                Console.WriteLine("[DEBUG HANDLER] Generating JWT token...");
                 var token = _tokenGenerator.GenerateToken(result);
+                Console.WriteLine($"[DEBUG HANDLER] JWT token generated: {(!string.IsNullOrEmpty(token) ? token.Substring(0, 20) + "..." : "EMPTY!")}");
 
+                Console.WriteLine($"[DEBUG HANDLER] Returning success with token length: {token?.Length ?? 0}");
                 return new AuthenticationResult(result.Id, result.EmailAddress, result.AccessProfileId.ToString(), token, "Autenticação realizada com sucesso.", refreshToken.RefreshToken, AuthenticationStatusEnum.Success);
             }
 			catch (Exception ex)
