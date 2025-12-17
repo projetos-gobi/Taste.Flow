@@ -2,37 +2,37 @@ import { ICreateMerchandisesRangeRequest, IGetAllMerchandisesByEnterpriseId, IGe
 import api from "./api";
 
 export const createMerchandisesRange = async (data: ICreateMerchandisesRangeRequest) => {
-    const response = await api.post("/Merchandise/create-merchandises-range", { ...data });
+    const response = await api.post("/api/Merchandise/create-merchandises-range", { ...data });
 
     return response.data.data;
 }
 
 export const getMerchandisesPaged = async (data: IGetMerchandisesPagedRequest) => {
-    const response = await api.post("/Merchandise/get-merchandises-paged", { ...data });
+    const response = await api.post("/api/Merchandise/get-merchandises-paged", { ...data });
 
     return response.data.data;
 }
 
 export const getMerchandiseById = async (data: IGetMerchandiseByIdRequest) => {
-    const response = await api.post("/Merchandise/get-merchandise-by-id", { ...data });
+    const response = await api.post("/api/Merchandise/get-merchandise-by-id", { ...data });
 
     return response.data.data;
 }
 
 export const updateMerchandise = async (data: IUpdateMerchandiseRequest) => {
-    const response = await api.post("/Merchandise/update-merchandise", { ...data });
+    const response = await api.post("/api/Merchandise/update-merchandise", { ...data });
 
     return response.data.data;
 }
 
 export const softDeleteMerchandise = async (data: ISoftDeleteMerchandiseRequest) => {
-    const response = await api.post("/Merchandise/soft-delete-merchandise", { ...data });
+    const response = await api.post("/api/Merchandise/soft-delete-merchandise", { ...data });
 
     return response.data.data;
 }
 
 export const getAllMerchandisesByEnterpriseId = async (data: IGetAllMerchandisesByEnterpriseId) => {
-    const response = await api.post("/Merchandise/get-all-merchandises-by-enterprise-id", { ...data });
+    const response = await api.post("/api/Merchandise/get-all-merchandises-by-enterprise-id", { ...data });
 
     return response.data.data;
 }

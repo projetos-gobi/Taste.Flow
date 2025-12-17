@@ -2,7 +2,7 @@ import { IGetFileUrlStockEntryAttachmentRequest } from "../types/stock-entry-att
 import api from "./api";
 
 export const getFileUrlStockEntryAttachment = async (data: IGetFileUrlStockEntryAttachmentRequest) => {
-    const response = await api.post("/StockEntryAttachment/get-file-url-stock-entry-attachment", { ...data });
+    const response = await api.post("/api/StockEntryAttachment/get-file-url-stock-entry-attachment", { ...data });
 
     return response.data.data;
 }
