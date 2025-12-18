@@ -59,7 +59,13 @@ namespace TasteFlow.Api.Infrastructure
                         parts.Add($"{name};dur={parsed:0.##}");
                 }
 
-                context.Response.Headers["Server-Timing"] = string.Join(", ", parts);
+                var timing = string.Join(", ", parts);
+
+                // Em chamadas diretas ao Fly, o browser vê "Server-Timing" normalmente.
+                // Mas quando passamos via proxy/rewrite da Vercel, ela pode não repassar o header "Server-Timing".
+                // Duplicamos em um header customizado para manter observabilidade end-to-end.
+                context.Response.Headers["Server-Timing"] = timing;
+                context.Response.Headers["X-TF-Server-Timing"] = timing;
 
                 return Task.CompletedTask;
             });
