@@ -51,7 +51,8 @@ namespace TasteFlow.Infrastructure.Startup
                 return new NpgsqlDataSourceBuilder(csb.ConnectionString).Build();
             });
 
-            services.AddDbContext<TasteFlowContext>(options => 
+            // Pool de DbContext reduz custo por request (alocação/instanciação) e tende a reduzir tempo “antes do handler” (DI).
+            services.AddDbContextPool<TasteFlowContext>(options => 
             {
                 var normalizedConnectionString = NpgsqlConnectionStringNormalizer.Normalize(
                     configuration.GetConnectionString("DefaultConnection"));

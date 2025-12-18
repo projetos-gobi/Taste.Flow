@@ -2,6 +2,7 @@
 using MediatR;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,6 +30,7 @@ namespace TasteFlow.Application.Users.Handlers
 
         public async Task<PagedResult<GetUsersPagedResponse>> Handle(GetUsersPagedQuery request, CancellationToken cancellationToken)
         {
+            var swHandler = Stopwatch.StartNew();
             try
             {
                 // REMOVER COMPLETAMENTE Entity Framework - usar apenas ADO.NET direto
@@ -58,6 +60,11 @@ namespace TasteFlow.Application.Users.Handlers
                 //_eventLogger.Log(LogTypeEnum.Error, ex, message);
 
                 return PagedResult<GetUsersPagedResponse>.Empty();
+            }
+            finally
+            {
+                swHandler.Stop();
+                Activity.Current?.SetTag("tf_users_handler_total", swHandler.Elapsed.TotalMilliseconds);
             }
         }
     }

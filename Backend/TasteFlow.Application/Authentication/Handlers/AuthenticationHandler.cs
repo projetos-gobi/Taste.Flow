@@ -32,23 +32,25 @@ namespace TasteFlow.Application.Authentication.Handlers
 
         public async Task<AuthenticationResult> Handle(AuthenticationQuery request, CancellationToken cancellationToken)
         {
-			try
-			{
+            var swHandler = Stopwatch.StartNew();
+
+            try
+            {
                 var swRepo = Stopwatch.StartNew();
                 var result = await _usersRepository.GetAuthenticatedAccountAsync(request.Email.Value, request.Password.Value);
                 swRepo.Stop();
                 Activity.Current?.SetTag("tf_auth_repo_total", swRepo.Elapsed.TotalMilliseconds);
-                
+
                 if (result == null)
                 {
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.UserNotFound, "Usuário não encontrado.");
                 }
-                 
+
                 var swHash = Stopwatch.StartNew();
                 string passwordHash = request.Password.Value.ToSha256Hash(result.PasswordSalt);
                 swHash.Stop();
                 Activity.Current?.SetTag("tf_auth_hash", swHash.Elapsed.TotalMilliseconds);
-                
+
                 if (passwordHash != result.PasswordHash)
                 {
                     return AuthenticationResult.Empty(AuthenticationStatusEnum.InvalidCredentials, "Credenciais inválidas.");
@@ -65,12 +67,17 @@ namespace TasteFlow.Application.Authentication.Handlers
 
                 return new AuthenticationResult(result.Id, result.EmailAddress, result.AccessProfileId.ToString(), token, "Autenticação realizada com sucesso.", refreshTokenString, AuthenticationStatusEnum.Success);
             }
-			catch (Exception ex)
+            catch (Exception ex)
             {
                 var message = $"Ocorreu um erro durante o login de um usuário: E-mail: {request.Email}";
                 //_eventLogger.Log(LogTypeEnum.Error, ex, message);
 
                 return AuthenticationResult.Empty(AuthenticationStatusEnum.Error, "Ocorreu um erro ao processar a autenticação.");
+            }
+            finally
+            {
+                swHandler.Stop();
+                Activity.Current?.SetTag("tf_auth_handler_total", swHandler.Elapsed.TotalMilliseconds);
             }
         }
     }
