@@ -40,85 +40,99 @@ function stripHopByHop(headers: Headers) {
 }
 
 async function proxy(req: NextRequest, pathParts: string[]) {
-  const origin = getBackendOrigin();
-  if (!origin) {
-    return new Response("Backend origin not configured", { status: 500 });
-  }
-
-  const inUrl = new URL(req.url);
-  const apiPath = "/" + pathParts.join("/");
-  const targetUrl = `${origin}/api${apiPath}${inUrl.search}`;
-
-  const method = req.method.toUpperCase();
-
-  // Copiar headers relevantes
-  const headers = new Headers(req.headers);
-  stripHopByHop(headers);
-  // Evitar repassar Accept-Encoding (Next/fetch lida com isso)
-  headers.delete("accept-encoding");
-
-  // Body (somente para métodos que permitem)
-  let body: ArrayBuffer | undefined = undefined;
-  if (!(method === "GET" || method === "HEAD")) {
-    body = await req.arrayBuffer();
-  }
-
-  const doFetch = async (timeoutMs: number) => {
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      return await fetch(targetUrl, {
-        method,
-        headers,
-        body: body && body.byteLength > 0 ? body : undefined,
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(t);
-    }
-  };
-
-  const retryable = isRetryable(method, `/api${apiPath}`);
-
-  let resp: Response | null = null;
   try {
-    resp = await doFetch(12000);
-  } catch (e) {
-    if (!retryable) throw e;
-    await new Promise((r) => setTimeout(r, 350));
-    try {
-      resp = await doFetch(15000);
-    } catch (e2) {
-      // Retornar erro útil para o cliente (em vez de 500 genérico)
+    const origin = getBackendOrigin();
+    if (!origin) {
       return Response.json(
-        {
-          error: "proxy_error",
-          message: "Falha ao contatar o backend (upstream) via proxy /api.",
-          upstream: targetUrl,
-        },
-        { status: 502 }
+        { error: "proxy_misconfigured", message: "Backend origin não configurado." },
+        { status: 500 }
       );
     }
+
+    const inUrl = new URL(req.url);
+    const apiPath = "/" + pathParts.join("/");
+    const targetUrl = `${origin}/api${apiPath}${inUrl.search}`;
+
+    const method = req.method.toUpperCase();
+
+    // Copiar headers relevantes
+    const headers = new Headers(req.headers);
+    stripHopByHop(headers);
+    // Evitar repassar headers que podem conflitar com o fetch/buffer no Node runtime
+    headers.delete("accept-encoding");
+    headers.delete("content-length");
+
+    // Body (somente para métodos que permitem)
+    let body: ArrayBuffer | undefined = undefined;
+    if (!(method === "GET" || method === "HEAD")) {
+      body = await req.arrayBuffer();
+    }
+
+    const doFetch = async (timeoutMs: number) => {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(targetUrl, {
+          method,
+          headers,
+          body: body && body.byteLength > 0 ? body : undefined,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(t);
+      }
+    };
+
+    const retryable = isRetryable(method, `/api${apiPath}`);
+
+    let resp: Response | null = null;
+    try {
+      resp = await doFetch(12000);
+    } catch (e) {
+      if (!retryable) {
+        return Response.json(
+          { error: "proxy_fetch_failed", message: "Falha ao chamar upstream.", upstream: targetUrl },
+          { status: 502 }
+        );
+      }
+
+      await new Promise((r) => setTimeout(r, 350));
+      try {
+        resp = await doFetch(15000);
+      } catch (e2) {
+        return Response.json(
+          { error: "proxy_error", message: "Falha ao contatar o backend (upstream) via proxy /api.", upstream: targetUrl },
+          { status: 502 }
+        );
+      }
+    }
+
+    // Se backend respondeu 5xx e for retryable, tenta 1x
+    if (retryable && resp.status >= 500) {
+      await new Promise((r) => setTimeout(r, 250));
+      resp = await doFetch(15000);
+    }
+
+    // Repasse de headers (inclui Server-Timing / X-TF-Server-Timing)
+    const outHeaders = new Headers(resp.headers);
+    stripHopByHop(outHeaders);
+
+    // Resposta same-origin: não precisa CORS, mas manter cache-control previsível
+    outHeaders.set("cache-control", "no-store");
+    outHeaders.set("x-tf-proxy", "next-route");
+
+    return new Response(resp.body, {
+      status: resp.status,
+      statusText: resp.statusText,
+      headers: outHeaders,
+    });
+  } catch (e: any) {
+    // Nunca deixar estourar 500 sem corpo (isso vira "Failed to load resource 500" no console)
+    return Response.json(
+      { error: "proxy_unhandled", message: String(e?.message ?? e ?? "unknown") },
+      { status: 502 }
+    );
   }
-
-  // Se backend respondeu 5xx e for retryable, tenta 1x
-  if (retryable && resp.status >= 500) {
-    await new Promise((r) => setTimeout(r, 250));
-    resp = await doFetch(15000);
-  }
-
-  // Repasse de headers (inclui Server-Timing / X-TF-Server-Timing)
-  const outHeaders = new Headers(resp.headers);
-  stripHopByHop(outHeaders);
-
-  // Resposta same-origin: não precisa CORS, mas manter cache-control previsível
-  outHeaders.set("cache-control", "no-store");
-
-  return new Response(resp.body, {
-    status: resp.status,
-    statusText: resp.statusText,
-    headers: outHeaders,
-  });
 }
 
 export async function GET(req: NextRequest, ctx: { params: { path: string[] } }) {
