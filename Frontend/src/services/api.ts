@@ -37,22 +37,49 @@ api.interceptors.response.use(
     const originalRequest = error?.config;
     const status = error?.response?.status;
     const url = originalRequest?.url ?? "";
+    const method = String(originalRequest?.method ?? "get").toLowerCase();
 
     const isAuthEndpoint =
       url.includes("/api/Authentication/login") ||
       url.includes("/api/Authentication/forgotpassword") ||
       url.includes("/api/Authentication/refresh-token");
 
-    // Retry 1x em timeout/rede (muito comum em mobile). Evita "canceled" após 15s.
-    // Obs: não aplicar para endpoints de auth para evitar loops.
+    // Retry 1x em timeout/rede (muito comum em mobile).
+    // IMPORTANTE: retry automático só para chamadas "seguras" (leitura e auth),
+    // para evitar duplicar comandos de escrita (create/update/delete).
     const isTimeout =
       error?.code === "ECONNABORTED" ||
       /timeout/i.test(String(error?.message ?? ""));
     const isNetworkError = !error?.response; // sem status/response
 
-    if ((isTimeout || isNetworkError) && !isAuthEndpoint && originalRequest && !originalRequest._retryNet) {
+    const isReadLikePost =
+      method === "post" && (url.includes("/get-") || url.includes("/get_"));
+
+    const isSafeMethod = method === "get" || method === "head" || method === "options";
+
+    // Auth é seguro para retry em erro de rede/timeout (não em 401).
+    const isRetryableAuth =
+      url.includes("/api/Authentication/login") ||
+      url.includes("/api/Authentication/refresh-token") ||
+      url.includes("/api/Authentication/forgotpassword");
+
+    const shouldRetryNetwork = isSafeMethod || isReadLikePost || isRetryableAuth;
+
+    if ((isTimeout || isNetworkError) && originalRequest && !originalRequest._retryNet && shouldRetryNetwork) {
       originalRequest._retryNet = true;
       await new Promise((r) => setTimeout(r, 250));
+      return api(originalRequest);
+    }
+
+    // Alguns erros 503 no primeiro login são transientes (DB/pool/infra). Retry 1x.
+    if (
+      status === 503 &&
+      url.includes("/api/Authentication/login") &&
+      originalRequest &&
+      !originalRequest._retry503
+    ) {
+      originalRequest._retry503 = true;
+      await new Promise((r) => setTimeout(r, 300));
       return api(originalRequest);
     }
 

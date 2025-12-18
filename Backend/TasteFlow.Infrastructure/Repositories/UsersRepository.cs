@@ -65,7 +65,7 @@ namespace TasteFlow.Infrastructure.Repositories
         {
             // Postgres é case-sensitive por padrão; normalizar evita 401 intermitente (principalmente em mobile).
             var normalizedEmail = (email ?? string.Empty).Trim().ToLowerInvariant();
-            const int maxRetries = 2;
+            const int maxRetries = 3;
             var delayMs = 100;
             var totalRetryDelayMs = 0;
 
