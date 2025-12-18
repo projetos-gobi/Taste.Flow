@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Npgsql;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -69,9 +70,14 @@ namespace TasteFlow.Infrastructure.Repositories
 
             try
             {
+                var swRepo = Stopwatch.StartNew();
+                var swOpen = Stopwatch.StartNew();
                 await using (var connection = await _dataSource.OpenConnectionAsync())
                 {
-                    // Query SQL com subquery para contar licenças usadas
+                    swOpen.Stop();
+                    Activity.Current?.SetTag("tf_ent_dbopen", swOpen.Elapsed.TotalMilliseconds);
+
+                    // Query SQL otimizada (JOIN + GROUP BY), evitando subquery por empresa
                     var sql = @"
                         SELECT 
                             e.""Id"", 
@@ -81,49 +87,69 @@ namespace TasteFlow.Infrastructure.Repositories
                             e.""Cnpj"", 
                             e.""LicenseQuantity"", 
                             e.""HasUnlimitedLicenses"",
-                            COALESCE((
-                                SELECT COUNT(*) 
-                                FROM ""UserEnterprise"" ue
-                                WHERE ue.""EnterpriseId"" = e.""Id""
-                                AND COALESCE(ue.""IsActive"", true)
-                                AND NOT COALESCE(ue.""IsDeleted"", false)
-                                AND ue.""LicenseManagementId"" IS NOT NULL
-                            ), 0) AS UsedLicenses
+                            COALESCE(
+                                COUNT(ue.""Id"") FILTER (
+                                    WHERE COALESCE(ue.""IsActive"", true)
+                                      AND NOT COALESCE(ue.""IsDeleted"", false)
+                                      AND ue.""LicenseManagementId"" IS NOT NULL
+                                ), 0
+                            ) AS ""UsedLicenses""
                         FROM ""Enterprise"" e
-                        WHERE COALESCE(e.""IsActive"", true) AND NOT COALESCE(e.""IsDeleted"", false)";
+                        LEFT JOIN ""UserEnterprise"" ue
+                          ON ue.""EnterpriseId"" = e.""Id""
+                        WHERE COALESCE(e.""IsActive"", true)
+                          AND NOT COALESCE(e.""IsDeleted"", false)
+                        GROUP BY 
+                            e.""Id"", e.""LicenseId"", e.""FantasyName"", e.""SocialReason"", e.""Cnpj"",
+                            e.""LicenseQuantity"", e.""HasUnlimitedLicenses""";
 
                     var command = new NpgsqlCommand(sql, connection);
-                    command.CommandTimeout = 30;
+                    command.CommandTimeout = 15;
 
+                    var swQuery = Stopwatch.StartNew();
                     await using (var reader = await command.ExecuteReaderAsync())
                     {
+                        var ordId = reader.GetOrdinal("Id");
+                        var ordLicenseId = reader.GetOrdinal("LicenseId");
+                        var ordFantasyName = reader.GetOrdinal("FantasyName");
+                        var ordSocialReason = reader.GetOrdinal("SocialReason");
+                        var ordCnpj = reader.GetOrdinal("Cnpj");
+                        var ordLicenseQuantity = reader.GetOrdinal("LicenseQuantity");
+                        var ordHasUnlimitedLicenses = reader.GetOrdinal("HasUnlimitedLicenses");
+                        var ordUsedLicenses = reader.GetOrdinal("UsedLicenses");
+
                         while (await reader.ReadAsync())
                         {
-                            var licenseQuantity = reader.IsDBNull(reader.GetOrdinal("LicenseQuantity")) 
+                            var licenseQuantity = reader.IsDBNull(ordLicenseQuantity) 
                                 ? (int?)null 
-                                : reader.GetInt32(reader.GetOrdinal("LicenseQuantity"));
-                            var hasUnlimitedLicenses = reader.GetBoolean(reader.GetOrdinal("HasUnlimitedLicenses"));
-                            var usedLicenses = reader.GetInt32(reader.GetOrdinal("UsedLicenses"));
+                                : reader.GetInt32(ordLicenseQuantity);
+                            var hasUnlimitedLicenses = !reader.IsDBNull(ordHasUnlimitedLicenses) && reader.GetBoolean(ordHasUnlimitedLicenses);
+                            var usedLicenses = reader.IsDBNull(ordUsedLicenses) ? 0 : reader.GetInt32(ordUsedLicenses);
 
                             enterprises.Add(new Enterprise
                             {
-                                Id = reader.GetGuid(reader.GetOrdinal("Id")),
-                                LicenseId = reader.IsDBNull(reader.GetOrdinal("LicenseId")) 
+                                Id = reader.GetGuid(ordId),
+                                LicenseId = reader.IsDBNull(ordLicenseId) 
                                     ? (Guid?)null 
-                                    : reader.GetGuid(reader.GetOrdinal("LicenseId")),
-                                FantasyName = reader.GetString(reader.GetOrdinal("FantasyName")),
-                                SocialReason = reader.IsDBNull(reader.GetOrdinal("SocialReason")) 
+                                    : reader.GetGuid(ordLicenseId),
+                                FantasyName = reader.IsDBNull(ordFantasyName) ? string.Empty : reader.GetString(ordFantasyName),
+                                SocialReason = reader.IsDBNull(ordSocialReason) 
                                     ? null 
-                                    : reader.GetString(reader.GetOrdinal("SocialReason")),
-                                Cnpj = reader.IsDBNull(reader.GetOrdinal("Cnpj")) 
+                                    : reader.GetString(ordSocialReason),
+                                Cnpj = reader.IsDBNull(ordCnpj) 
                                     ? null 
-                                    : reader.GetString(reader.GetOrdinal("Cnpj")),
+                                    : reader.GetString(ordCnpj),
                                 LicenseQuantity = hasUnlimitedLicenses ? 1000 : (licenseQuantity ?? 0) - usedLicenses,
                                 HasUnlimitedLicenses = hasUnlimitedLicenses,
                                 UserEnterprises = new List<UserEnterprise>() // Lista vazia - não precisa para o response
                             });
                         }
                     }
+
+                    swQuery.Stop();
+                    Activity.Current?.SetTag("tf_ent_dbquery", swQuery.Elapsed.TotalMilliseconds);
+                    swRepo.Stop();
+                    Activity.Current?.SetTag("tf_ent_repo_total", swRepo.Elapsed.TotalMilliseconds);
                 }
             }
             catch (Exception ex)

@@ -2,6 +2,7 @@
 using MediatR;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -31,11 +32,17 @@ namespace TasteFlow.Application.Enterprise.Handlers
         {
             try
             {
+                var sw = Stopwatch.StartNew();
                 // Repositório já calcula LicenseQuantity corretamente usando ADO.NET direto
                 var result = await _enterpriseRepository.GetAllEnterprisesForUserRegistrationAsync();
 
+                var swMap = Stopwatch.StartNew();
                 var responses = _mapper.Map<IEnumerable<GetAllEnterprisesForUserRegistrationResponse>>(result);
+                swMap.Stop();
+                Activity.Current?.SetTag("tf_ent_map", swMap.Elapsed.TotalMilliseconds);
 
+                sw.Stop();
+                Activity.Current?.SetTag("tf_ent_handler_total", sw.Elapsed.TotalMilliseconds);
                 return responses;
             }
             catch (Exception ex)
