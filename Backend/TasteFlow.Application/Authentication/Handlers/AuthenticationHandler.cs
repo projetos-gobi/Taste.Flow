@@ -62,8 +62,9 @@ namespace TasteFlow.Application.Authentication.Handlers
                 swJwt.Stop();
                 Activity.Current?.SetTag("tf_auth_jwt", swJwt.Elapsed.TotalMilliseconds);
 
-                // Gerar refresh token localmente (não salvar no banco por enquanto para evitar bloqueio do DbContext)
-                var refreshTokenString = Guid.NewGuid().ToString();
+                // Refresh token persistido para permitir renovação do JWT sem re-login
+                var refresh = await _userRefreshTokenRepository.CreateUserRefreshTokenAsync(result.Id);
+                var refreshTokenString = refresh?.RefreshToken ?? string.Empty;
 
                 return new AuthenticationResult(result.Id, result.EmailAddress, result.AccessProfileId.ToString(), token, "Autenticação realizada com sucesso.", refreshTokenString, AuthenticationStatusEnum.Success);
             }
