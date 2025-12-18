@@ -15,6 +15,12 @@ function resolveBaseURL() {
   return process.env.NEXT_PUBLIC_API_URL || undefined;
 }
 
+function resolveFallbackOrigin() {
+  // Para quando o proxy/rewrite da Vercel falhar (timeout/rede), tentamos falar direto com o backend.
+  // Precisa existir em env (ex.: https://tasteflow-backend.fly.dev)
+  return process.env.NEXT_PUBLIC_API_URL || undefined;
+}
+
 export const api = axios.create({
   baseURL: resolveBaseURL(),
   timeout: 15000,
@@ -98,6 +104,22 @@ api.interceptors.response.use(
       originalRequest._retryNetCount = retryCount + 1;
       const delay = retryCount === 0 ? 250 : 600;
       await new Promise((r) => setTimeout(r, delay));
+
+      // Se estamos usando SAME-ORIGIN (proxy da Vercel) e mesmo assim falhou,
+      // no último retry tentamos rota alternativa direto no backend (Fly).
+      // Isso reduz casos em que a Vercel fica “presa” mas o Fly está ok.
+      if (
+        retryCount === 1 && // ou seja, este será o 2º retry (último)
+        !originalRequest.baseURL &&
+        typeof originalRequest.url === "string" &&
+        originalRequest.url.startsWith("/api/")
+      ) {
+        const fallback = resolveFallbackOrigin();
+        if (fallback) {
+          originalRequest.baseURL = fallback;
+        }
+      }
+
       return api(originalRequest);
     }
 
