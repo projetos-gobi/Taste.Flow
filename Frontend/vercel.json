@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://tasteflow-backend.fly.dev/api/:path*"
+    }
+  ]
+}
+
+

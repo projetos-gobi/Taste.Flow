@@ -2,8 +2,21 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import useSession from "@/src/hooks/useSession";
 
+function resolveBaseURL() {
+  // Em produção (Vercel), preferimos SAME-ORIGIN para evitar instabilidade mobile/CORS.
+  // Isso permite usar rewrites (`vercel.json`) para encaminhar /api/* ao backend no Fly.
+  if (typeof window !== "undefined") {
+    const host = window.location.host.toLowerCase();
+    if (host.includes("vercel.app") || host.includes("taste-flow")) {
+      return undefined; // relative
+    }
+  }
+
+  return process.env.NEXT_PUBLIC_API_URL || undefined;
+}
+
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: resolveBaseURL(),
   timeout: 15000,
   headers: {
     "Content-Type": "application/json",
@@ -105,11 +118,7 @@ api.interceptors.response.use(
       if (!refreshInFlight) {
         refreshInFlight = (async () => {
           try {
-            const resp = await axios.post(
-              `${process.env.NEXT_PUBLIC_API_URL}/api/Authentication/refresh-token`,
-              { userId, refreshToken },
-              { timeout: 15000, headers: { "Content-Type": "application/json" } }
-            );
+            const resp = await api.post("/api/Authentication/refresh-token", { userId, refreshToken }, { timeout: 15000 });
 
             const newToken = resp?.data?.data?.token as string | undefined;
             if (!newToken) return null;
