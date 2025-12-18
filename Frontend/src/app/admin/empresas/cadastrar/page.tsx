@@ -154,10 +154,19 @@ export default function CadastrarEmpresaPage() {
         toast.success("Empresa criada com sucesso!");
         router.push("/admin/empresas")
       }else{
-        toast.error("Falha ao criar a empresa. Tente novamente.");
+        toast.error(response?.message || "Falha ao criar a empresa. Tente novamente.");
       } 
     } catch (error) {
-      console.error("Erro ao salvar empresa:", error)
+      const err: any = error;
+      const apiErrors = err?.response?.data?.errors;
+      const apiMessage = err?.response?.data?.data?.message;
+      const msg =
+        (Array.isArray(apiErrors) && apiErrors.length > 0 ? apiErrors[0] : undefined) ||
+        apiMessage ||
+        err?.message ||
+        "Erro ao salvar empresa. Tente novamente.";
+      toast.error(String(msg));
+      console.error("Erro ao salvar empresa:", error);
     } finally {
       setIsLoading(false)
     }

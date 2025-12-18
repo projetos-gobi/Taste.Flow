@@ -31,28 +31,149 @@ namespace TasteFlow.Infrastructure.Repositories
         {
             try
             {
+                // ADO.NET direto para evitar travas/latência do EF em Postgres + pooler.
+                var swTotal = Stopwatch.StartNew();
+                var now = DateTime.UtcNow;
+                var systemUserId = Guid.Parse("8f6a55e6-a763-4f13-9b58-9cea44e1836c");
+
+                if (enterprise.Id == Guid.Empty)
+                    enterprise.Id = Guid.NewGuid();
+
                 enterprise.IsHeadOffice = true;
-                enterprise.CreatedBy = Guid.Parse("8f6a55e6-a763-4f13-9b58-9cea44e1836c");
-                enterprise.CreatedOn = DateTime.Now.ToUniversalTime();
+                enterprise.CreatedBy = systemUserId;
+                enterprise.CreatedOn = now;
                 enterprise.IsDeleted = false;
+                enterprise.IsActive = enterprise.IsActive; // vem do request
 
-                enterprise.EnterpriseAddresses.ToList().ForEach(x =>
+                foreach (var a in enterprise.EnterpriseAddresses ?? Enumerable.Empty<EnterpriseAddress>())
                 {
-                    x.CreatedOn = DateTime.Now.ToUniversalTime();
-                    x.CreatedBy = Guid.Parse("8f6a55e6-a763-4f13-9b58-9cea44e1836c");
-                });
+                    if (a.Id == Guid.Empty) a.Id = Guid.NewGuid();
+                    a.EnterpriseId = enterprise.Id;
+                    a.CreatedOn = now;
+                    a.CreatedBy = systemUserId;
+                    a.IsActive = true;
+                    a.IsDeleted = false;
+                }
 
-                enterprise.EnterpriseContacts.ToList().ForEach(x =>
+                foreach (var c in enterprise.EnterpriseContacts ?? Enumerable.Empty<EnterpriseContact>())
                 {
-                    x.CreatedOn = DateTime.Now.ToUniversalTime();
-                    x.CreatedBy = Guid.Parse("8f6a55e6-a763-4f13-9b58-9cea44e1836c");
-                });
+                    if (c.Id == Guid.Empty) c.Id = Guid.NewGuid();
+                    c.EnterpriseId = enterprise.Id;
+                    c.CreatedOn = now;
+                    c.CreatedBy = systemUserId;
+                    c.IsActive = true;
+                    c.IsDeleted = false;
+                }
 
-                Add(enterprise);
+                var swOpen = Stopwatch.StartNew();
+                await using var conn = await _dataSource.OpenConnectionAsync();
+                swOpen.Stop();
+                Activity.Current?.SetTag("tf_ent_create_dbopen", swOpen.Elapsed.TotalMilliseconds);
 
-                var result = await SaveChangesAsync();
+                await using var tx = await conn.BeginTransactionAsync();
 
-                return (result > 0);
+                // Inserir Enterprise
+                var swInsert = Stopwatch.StartNew();
+                await using (var cmd = new NpgsqlCommand(@"
+INSERT INTO ""Enterprise""
+(""Id"", ""LicenseId"", ""MainEnterpriseId"", ""FantasyName"", ""SocialReason"", ""Cnpj"", ""LicenseQuantity"",
+ ""HasUnlimitedLicenses"", ""IsHeadOffice"", ""StateRegistration"", ""MunicipalRegistration"", ""Observation"",
+ ""CreatedOn"", ""CreatedBy"", ""IsDeleted"", ""IsActive"")
+VALUES
+(@id, @licenseId, @mainEnterpriseId, @fantasyName, @socialReason, @cnpj, @licenseQuantity,
+ @hasUnlimitedLicenses, @isHeadOffice, @stateRegistration, @municipalRegistration, @observation,
+ @createdOn, @createdBy, @isDeleted, @isActive)", conn, tx)
+                {
+                    CommandTimeout = 10
+                })
+                {
+                    cmd.Parameters.AddWithValue("id", enterprise.Id);
+                    cmd.Parameters.AddWithValue("licenseId", (object?)enterprise.LicenseId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("mainEnterpriseId", (object?)enterprise.MainEnterpriseId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("fantasyName", (object?)enterprise.FantasyName ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("socialReason", (object?)enterprise.SocialReason ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("cnpj", (object?)enterprise.Cnpj ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("licenseQuantity", (object?)enterprise.LicenseQuantity ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("hasUnlimitedLicenses", enterprise.HasUnlimitedLicenses);
+                    cmd.Parameters.AddWithValue("isHeadOffice", enterprise.IsHeadOffice);
+                    cmd.Parameters.AddWithValue("stateRegistration", (object?)enterprise.StateRegistration ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("municipalRegistration", (object?)enterprise.MunicipalRegistration ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("observation", (object?)enterprise.Observation ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("createdOn", enterprise.CreatedOn);
+                    cmd.Parameters.AddWithValue("createdBy", enterprise.CreatedBy);
+                    cmd.Parameters.AddWithValue("isDeleted", enterprise.IsDeleted);
+                    cmd.Parameters.AddWithValue("isActive", enterprise.IsActive);
+
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                // Inserir addresses
+                foreach (var a in enterprise.EnterpriseAddresses ?? Enumerable.Empty<EnterpriseAddress>())
+                {
+                    await using var cmd = new NpgsqlCommand(@"
+INSERT INTO ""EnterpriseAddress""
+(""Id"", ""EnterpriseId"", ""PostalCode"", ""Street"", ""Number"", ""Complement"", ""District"", ""City"", ""State"",
+ ""Latitude"", ""Longitude"", ""CreatedOn"", ""CreatedBy"", ""IsDeleted"", ""IsActive"")
+VALUES
+(@id, @enterpriseId, @postalCode, @street, @number, @complement, @district, @city, @state,
+ @latitude, @longitude, @createdOn, @createdBy, @isDeleted, @isActive)", conn, tx)
+                    {
+                        CommandTimeout = 10
+                    };
+
+                    cmd.Parameters.AddWithValue("id", a.Id);
+                    cmd.Parameters.AddWithValue("enterpriseId", (object?)a.EnterpriseId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("postalCode", (object?)a.PostalCode ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("street", (object?)a.Street ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("number", (object?)a.Number ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("complement", (object?)a.Complement ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("district", (object?)a.District ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("city", (object?)a.City ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("state", (object?)a.State ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("latitude", (object?)a.Latitude ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("longitude", (object?)a.Longitude ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("createdOn", a.CreatedOn);
+                    cmd.Parameters.AddWithValue("createdBy", a.CreatedBy);
+                    cmd.Parameters.AddWithValue("isDeleted", a.IsDeleted);
+                    cmd.Parameters.AddWithValue("isActive", a.IsActive);
+
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                // Inserir contacts
+                foreach (var c in enterprise.EnterpriseContacts ?? Enumerable.Empty<EnterpriseContact>())
+                {
+                    await using var cmd = new NpgsqlCommand(@"
+INSERT INTO ""EnterpriseContact""
+(""Id"", ""EnterpriseId"", ""Telephone"", ""EmailAddress"", ""Responsible"",
+ ""CreatedOn"", ""CreatedBy"", ""IsDeleted"", ""IsActive"")
+VALUES
+(@id, @enterpriseId, @telephone, @emailAddress, @responsible,
+ @createdOn, @createdBy, @isDeleted, @isActive)", conn, tx)
+                    {
+                        CommandTimeout = 10
+                    };
+
+                    cmd.Parameters.AddWithValue("id", c.Id);
+                    cmd.Parameters.AddWithValue("enterpriseId", (object?)c.EnterpriseId ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("telephone", (object?)c.Telephone ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("emailAddress", (object?)c.EmailAddress ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("responsible", (object?)c.Responsible ?? DBNull.Value);
+                    cmd.Parameters.AddWithValue("createdOn", c.CreatedOn);
+                    cmd.Parameters.AddWithValue("createdBy", c.CreatedBy);
+                    cmd.Parameters.AddWithValue("isDeleted", c.IsDeleted);
+                    cmd.Parameters.AddWithValue("isActive", c.IsActive);
+
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                await tx.CommitAsync();
+                swInsert.Stop();
+                Activity.Current?.SetTag("tf_ent_create_dbinsert", swInsert.Elapsed.TotalMilliseconds);
+
+                swTotal.Stop();
+                Activity.Current?.SetTag("tf_ent_create_total", swTotal.Elapsed.TotalMilliseconds);
+                return true;
             }
             catch (Exception ex)
             {
@@ -283,9 +404,42 @@ namespace TasteFlow.Infrastructure.Repositories
         {
             try
             {
-                var result = await DbSet.AnyAsync(x => (x.Cnpj.Equals(enterprise.Cnpj) || x.MunicipalRegistration.Equals(enterprise.MunicipalRegistration) || x.StateRegistration.Equals(enterprise.StateRegistration)) && !x.IsDeleted);
+                var cnpj = (enterprise?.Cnpj ?? string.Empty).Trim();
+                var mr = (enterprise?.MunicipalRegistration ?? string.Empty).Trim();
+                var sr = (enterprise?.StateRegistration ?? string.Empty).Trim();
 
-                return result;
+                if (string.IsNullOrWhiteSpace(cnpj) && string.IsNullOrWhiteSpace(mr) && string.IsNullOrWhiteSpace(sr))
+                    return false;
+
+                var swOpen = Stopwatch.StartNew();
+                await using var conn = await _dataSource.OpenConnectionAsync();
+                swOpen.Stop();
+                Activity.Current?.SetTag("tf_ent_exists_dbopen", swOpen.Elapsed.TotalMilliseconds);
+
+                var swQuery = Stopwatch.StartNew();
+                await using var cmd = new NpgsqlCommand(@"
+SELECT 1
+FROM ""Enterprise"" e
+WHERE NOT COALESCE(e.""IsDeleted"", false)
+  AND (
+    (@cnpj <> '' AND e.""Cnpj"" = @cnpj)
+    OR (@mr <> '' AND e.""MunicipalRegistration"" = @mr)
+    OR (@sr <> '' AND e.""StateRegistration"" = @sr)
+  )
+LIMIT 1", conn)
+                {
+                    CommandTimeout = 5
+                };
+
+                cmd.Parameters.AddWithValue("cnpj", cnpj);
+                cmd.Parameters.AddWithValue("mr", mr);
+                cmd.Parameters.AddWithValue("sr", sr);
+
+                var exists = await cmd.ExecuteScalarAsync() != null;
+                swQuery.Stop();
+                Activity.Current?.SetTag("tf_ent_exists_dbquery", swQuery.Elapsed.TotalMilliseconds);
+
+                return exists;
             }
             catch (Exception ex)
             {
