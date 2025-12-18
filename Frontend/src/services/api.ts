@@ -26,10 +26,24 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = Cookies.get("token");
   const url = config.url ?? "";
+  const method = String(config.method ?? "get").toLowerCase();
   const isAuthEndpoint =
     url.includes("/api/Authentication/login") ||
     url.includes("/api/Authentication/forgotpassword") ||
     url.includes("/api/Authentication/refresh-token");
+
+  // Para endpoints de leitura (nossos POST /get-*), preferimos timeouts menores + retries.
+  // Isso reduz o “travão” de 15s no mobile quando a conexão fica presa.
+  const isReadLikePost =
+    method === "post" && (url.includes("/get-") || url.includes("/get_"));
+
+  if (isReadLikePost) {
+    config.timeout = 6000;
+  }
+
+  if (url.includes("/api/Authentication/login")) {
+    config.timeout = 8000;
+  }
 
   if (token) {
     // Não enviar Bearer no login/refresh: evita validação desnecessária e pode reduzir latência.
@@ -78,9 +92,12 @@ api.interceptors.response.use(
 
     const shouldRetryNetwork = isSafeMethod || isReadLikePost || isRetryableAuth;
 
-    if ((isTimeout || isNetworkError) && originalRequest && !originalRequest._retryNet && shouldRetryNetwork) {
-      originalRequest._retryNet = true;
-      await new Promise((r) => setTimeout(r, 250));
+    // Retry até 2x (principalmente em mobile)
+    const retryCount = Number(originalRequest?._retryNetCount ?? 0);
+    if ((isTimeout || isNetworkError) && originalRequest && shouldRetryNetwork && retryCount < 2) {
+      originalRequest._retryNetCount = retryCount + 1;
+      const delay = retryCount === 0 ? 250 : 600;
+      await new Promise((r) => setTimeout(r, delay));
       return api(originalRequest);
     }
 

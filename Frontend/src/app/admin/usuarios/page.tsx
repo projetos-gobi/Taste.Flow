@@ -60,7 +60,8 @@ export default function UsersPage() {
       setTotalItems(result.count);
       setCurrentPage(result.page);
     } catch (error) {
-      console.error("Erro ao buscar usuários:", error)
+      console.error("Erro ao buscar usuários:", error);
+      toast.error("Não foi possível carregar os usuários. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +104,7 @@ export default function UsersPage() {
   }
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page)
+    fetchInitialData(page);
   }
 
   return (

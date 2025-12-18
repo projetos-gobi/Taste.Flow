@@ -58,7 +58,8 @@ export default function CompaniesPage() {
       setTotalItems(result.count);
       setCurrentPage(result.page);
     } catch (error) {
-      console.error("Erro ao buscar empresas:", error)
+      console.error("Erro ao buscar empresas:", error);
+      toast.error("Não foi possível carregar as empresas. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
