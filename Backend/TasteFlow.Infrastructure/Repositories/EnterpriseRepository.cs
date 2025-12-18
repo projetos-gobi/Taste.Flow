@@ -355,6 +355,199 @@ namespace TasteFlow.Infrastructure.Repositories
             return result;
         }
 
+        public async Task<(List<Enterprise> enterprises, int totalCount)> GetEnterprisesPagedWithCountDirectAsync(int page, int pageSize, object filter = null)
+        {
+            // Objetivo: evitar EF/Include/CountAsync em Postgres + pooler (instabilidade/latência).
+            // Implementação via ADO.NET direto com paginação, filtros simples e um COUNT barato.
+            var enterprises = new List<Enterprise>();
+            var totalCount = 0;
+
+            // Extrair filtros por reflexão (mantém compatibilidade com Application.Common.Filters.EnterpriseFilter).
+            Guid? licenseId = null;
+            string fantasyName = null;
+            string cnpj = null;
+            string city = null;
+            bool? isActive = null;
+
+            if (filter != null)
+            {
+                var t = filter.GetType();
+                licenseId = t.GetProperty("LicenseId")?.GetValue(filter) as Guid?;
+                fantasyName = t.GetProperty("FantasyName")?.GetValue(filter) as string;
+                cnpj = t.GetProperty("Cnpj")?.GetValue(filter) as string;
+                city = t.GetProperty("City")?.GetValue(filter) as string;
+                isActive = t.GetProperty("IsActive")?.GetValue(filter) as bool?;
+            }
+
+            var offset = Math.Max(0, (page - 1) * pageSize);
+
+            const int maxRetries = 2;
+            var retryCount = 0;
+            var delayMs = 100;
+
+            while (retryCount < maxRetries)
+            {
+                try
+                {
+                    enterprises.Clear();
+                    var swRepo = Stopwatch.StartNew();
+
+                    var swOpen = Stopwatch.StartNew();
+                    await using var connection = await _dataSource.OpenConnectionAsync();
+                    swOpen.Stop();
+                    Activity.Current?.SetTag("tf_ent_paged_dbopen", swOpen.Elapsed.TotalMilliseconds);
+
+                    // WHERE dinâmico (somente filtros informados)
+                    var where = new StringBuilder();
+                    where.AppendLine(@"WHERE NOT COALESCE(e.""IsDeleted"", false)");
+
+                    if (isActive.HasValue)
+                        where.AppendLine(@"  AND COALESCE(e.""IsActive"", true) = @isActive");
+
+                    if (licenseId.HasValue)
+                        where.AppendLine(@"  AND e.""LicenseId"" = @licenseId");
+
+                    if (!string.IsNullOrWhiteSpace(fantasyName))
+                        where.AppendLine(@"  AND LOWER(COALESCE(e.""FantasyName"", '')) LIKE @fantasyName");
+
+                    if (!string.IsNullOrWhiteSpace(cnpj))
+                        where.AppendLine(@"  AND e.""Cnpj"" = @cnpj");
+
+                    if (!string.IsNullOrWhiteSpace(city))
+                        where.AppendLine(@"
+  AND EXISTS (
+    SELECT 1
+    FROM ""EnterpriseAddress"" ea
+    WHERE ea.""EnterpriseId"" = e.""Id""
+      AND NOT COALESCE(ea.""IsDeleted"", false)
+      AND LOWER(COALESCE(ea.""City"", '')) LIKE @city
+  )");
+
+                    var countSql = $@"
+SELECT COUNT(*)
+FROM ""Enterprise"" e
+{where}";
+
+                    await using (var countCmd = new NpgsqlCommand(countSql, connection) { CommandTimeout = 10 })
+                    {
+                        BindParams(countCmd);
+                        var swCount = Stopwatch.StartNew();
+                        var scalar = await countCmd.ExecuteScalarAsync();
+                        swCount.Stop();
+                        Activity.Current?.SetTag("tf_ent_paged_dbcount", swCount.Elapsed.TotalMilliseconds);
+                        totalCount = scalar == null ? 0 : Convert.ToInt32(scalar);
+                    }
+
+                    // SELECT: pegar campos + 1º contato + 1º endereço + nome da licença (LEFT JOIN)
+                    var selectSql = $@"
+SELECT
+  e.""Id"",
+  e.""LicenseId"",
+  e.""FantasyName"",
+  e.""Cnpj"",
+  e.""LicenseQuantity"",
+  COALESCE(e.""IsActive"", true) AS ""IsActive"",
+  l.""Name"" AS ""LicenseName"",
+  (
+    SELECT ec.""EmailAddress""
+    FROM ""EnterpriseContact"" ec
+    WHERE ec.""EnterpriseId"" = e.""Id""
+      AND NOT COALESCE(ec.""IsDeleted"", false)
+    ORDER BY ec.""CreatedOn"" ASC
+    LIMIT 1
+  ) AS ""EmailAddress"",
+  (
+    SELECT ec.""Telephone""
+    FROM ""EnterpriseContact"" ec
+    WHERE ec.""EnterpriseId"" = e.""Id""
+      AND NOT COALESCE(ec.""IsDeleted"", false)
+    ORDER BY ec.""CreatedOn"" ASC
+    LIMIT 1
+  ) AS ""Contact"",
+  (
+    SELECT (COALESCE(ea.""Street"", '') || ' - ' || COALESCE(ea.""PostalCode"", ''))
+    FROM ""EnterpriseAddress"" ea
+    WHERE ea.""EnterpriseId"" = e.""Id""
+      AND NOT COALESCE(ea.""IsDeleted"", false)
+    ORDER BY ea.""CreatedOn"" ASC
+    LIMIT 1
+  ) AS ""Address""
+FROM ""Enterprise"" e
+LEFT JOIN ""License"" l ON l.""Id"" = e.""LicenseId""
+{where}
+ORDER BY e.""CreatedOn"" ASC
+LIMIT @pageSize OFFSET @offset";
+
+                    await using (var cmd = new NpgsqlCommand(selectSql, connection) { CommandTimeout = 15 })
+                    {
+                        BindParams(cmd);
+                        cmd.Parameters.AddWithValue("pageSize", pageSize);
+                        cmd.Parameters.AddWithValue("offset", offset);
+
+                        var swQuery = Stopwatch.StartNew();
+                        await using var reader = await cmd.ExecuteReaderAsync();
+                        swQuery.Stop();
+                        Activity.Current?.SetTag("tf_ent_paged_dbquery", swQuery.Elapsed.TotalMilliseconds);
+
+                        while (await reader.ReadAsync())
+                        {
+                            var ent = new Enterprise
+                            {
+                                Id = reader.GetGuid(0),
+                                LicenseId = reader.IsDBNull(1) ? (Guid?)null : reader.GetGuid(1),
+                                FantasyName = reader.IsDBNull(2) ? null : reader.GetString(2),
+                                Cnpj = reader.IsDBNull(3) ? null : reader.GetString(3),
+                                LicenseQuantity = reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
+                                IsActive = !reader.IsDBNull(5) && reader.GetBoolean(5),
+                                IsDeleted = false,
+                                License = reader.IsDBNull(6) ? null : new License { Name = reader.GetString(6) },
+                                EnterpriseContacts = new List<EnterpriseContact>(),
+                                EnterpriseAddresses = new List<EnterpriseAddress>(),
+                            };
+
+                            if (!reader.IsDBNull(7))
+                                ent.EnterpriseContacts.Add(new EnterpriseContact { EmailAddress = reader.GetString(7) });
+
+                            if (!reader.IsDBNull(8))
+                                ent.EnterpriseContacts.Add(new EnterpriseContact { Telephone = reader.GetString(8) });
+
+                            if (!reader.IsDBNull(9))
+                                ent.EnterpriseAddresses.Add(new EnterpriseAddress { Street = reader.GetString(9) });
+
+                            enterprises.Add(ent);
+                        }
+                    }
+
+                    swRepo.Stop();
+                    Activity.Current?.SetTag("tf_ent_paged_repo_total", swRepo.Elapsed.TotalMilliseconds);
+                    return (enterprises, totalCount);
+                }
+                catch (Exception ex)
+                {
+                    retryCount++;
+                    if (retryCount >= maxRetries)
+                        return (enterprises, totalCount);
+
+                    await Task.Delay(delayMs);
+                    delayMs *= 2;
+                }
+            }
+
+            return (enterprises, totalCount);
+
+            void BindParams(NpgsqlCommand c)
+            {
+                if (isActive.HasValue) c.Parameters.AddWithValue("isActive", isActive.Value);
+                if (licenseId.HasValue) c.Parameters.AddWithValue("licenseId", licenseId.Value);
+                if (!string.IsNullOrWhiteSpace(fantasyName))
+                    c.Parameters.AddWithValue("fantasyName", $"%{fantasyName.Trim().ToLowerInvariant()}%");
+                if (!string.IsNullOrWhiteSpace(cnpj))
+                    c.Parameters.AddWithValue("cnpj", cnpj.Trim());
+                if (!string.IsNullOrWhiteSpace(city))
+                    c.Parameters.AddWithValue("city", $"%{city.Trim().ToLowerInvariant()}%");
+            }
+        }
+
         public async Task<bool> SoftDeleteEnterpriseAsync(Guid enterpriseId, Guid userId)
         {
             try

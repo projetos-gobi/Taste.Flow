@@ -11,6 +11,7 @@ using TasteFlow.Domain.Interfaces.Common;
 using TasteFlow.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using TasteFlow.Application.Enterprise.Queries;
+using System.Diagnostics;
 
 namespace TasteFlow.Application.Enterprise.Handlers
 {
@@ -32,32 +33,38 @@ namespace TasteFlow.Application.Enterprise.Handlers
         {
             try
             {
-                var query = _enterpriseRepository.GetEnterprisesPaged();
+                var sw = Stopwatch.StartNew();
 
-                if (request.Filter.LicenseId.HasValue)
-                    query = query.Where(e => e.LicenseId == request.Filter.LicenseId);
+                // SQL direto (Infra) para estabilidade/performance em Postgres+pooler
+                var swRepo = Stopwatch.StartNew();
+                var (items, totalCount) = await _enterpriseRepository.GetEnterprisesPagedWithCountDirectAsync(
+                    request.Query.Page,
+                    request.Query.PageSize,
+                    request.Filter
+                );
+                swRepo.Stop();
+                Activity.Current?.SetTag("tf_ent_paged_handler_repo", swRepo.Elapsed.TotalMilliseconds);
 
-                if (!string.IsNullOrWhiteSpace(request.Filter.FantasyName))
-                    query = query.Where(e => e.FantasyName.ToLower().Contains(request.Filter.FantasyName.ToLower()));
+                // Map manual leve (evita AutoMapper + graphs complexos)
+                var swMap = Stopwatch.StartNew();
+                var response = items.Select(x => new GetEnterprisesPagedResponse
+                {
+                    Id = x.Id,
+                    LicenseId = x.LicenseId,
+                    FantasyName = x.FantasyName,
+                    Cnpj = x.Cnpj,
+                    LicenseQuantity = x.LicenseQuantity,
+                    IsActive = x.IsActive,
+                    LicenseName = x.License?.Name,
+                    EmailAddress = x.EnterpriseContacts?.FirstOrDefault(ec => !string.IsNullOrWhiteSpace(ec.EmailAddress))?.EmailAddress,
+                    Contact = x.EnterpriseContacts?.FirstOrDefault(ec => !string.IsNullOrWhiteSpace(ec.Telephone))?.Telephone,
+                    Address = x.EnterpriseAddresses?.FirstOrDefault()?.Street
+                }).ToList();
+                swMap.Stop();
+                Activity.Current?.SetTag("tf_ent_paged_map", swMap.Elapsed.TotalMilliseconds);
 
-                if (!string.IsNullOrWhiteSpace(request.Filter.Cnpj))
-                    query = query.Where(e => e.Cnpj == request.Filter.Cnpj);
-
-                if (!string.IsNullOrWhiteSpace(request.Filter.City))
-                    query = query.Where(e => e.EnterpriseAddresses.Any(a => a.City.ToLower().Contains(request.Filter.City.ToLower())));
-
-                if (request.Filter.IsActive.HasValue)
-                    query = query.Where(e => e.IsActive == request.Filter.IsActive);
-
-                var result = await query
-                    .OrderBy(x => x.CreatedOn)
-                    .Skip((request.Query.Page - 1) * request.Query.PageSize)
-                    .Take(request.Query.PageSize)
-                    .ToListAsync(cancellationToken);
-
-                var totalCount = await query.CountAsync(cancellationToken);
-
-                var response = _mapper.Map<List<GetEnterprisesPagedResponse>>(result);
+                sw.Stop();
+                Activity.Current?.SetTag("tf_ent_paged_handler_total", sw.Elapsed.TotalMilliseconds);
 
                 return new PagedResult<GetEnterprisesPagedResponse>(totalCount, response, request.Query.Page, request.Query.PageSize);
             }

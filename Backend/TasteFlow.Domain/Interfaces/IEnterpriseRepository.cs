@@ -17,6 +17,7 @@ namespace TasteFlow.Domain.Interfaces
         Task<Enterprise> GetEnterpriseDetailByIdAsync(Guid id);
         Task<Enterprise> GetEnterpriseForUpdateByIdAsync(Guid id);
         IQueryable<Enterprise> GetEnterprisesPaged();
+        Task<(List<Enterprise> enterprises, int totalCount)> GetEnterprisesPagedWithCountDirectAsync(int page, int pageSize, object filter = null);
         Task<bool> SoftDeleteEnterpriseAsync(Guid enterpriseId, Guid userId);
         Task<IEnumerable<Enterprise>> GetAllEnterprisesForUserRegistrationAsync();
         Task<Enterprise> GetEnterpriseByIdForCreateLicenseAsync(Guid id);
