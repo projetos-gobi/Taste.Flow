@@ -1,9 +1,15 @@
 import { NextRequest } from "next/server";
 
 function getBackendOrigin() {
-  const raw = process.env.NEXT_PUBLIC_API_URL || "";
-  // Esperado: https://tasteflow-backend.fly.dev (sem /api no final)
-  return raw.replace(/\/+$/, "");
+  // Preferir uma env server-side, mas aceitar NEXT_PUBLIC_API_URL para compatibilidade.
+  // Fallback hardcoded garante que não quebra login se env não estiver configurada na Vercel.
+  const raw =
+    process.env.BACKEND_ORIGIN ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://tasteflow-backend.fly.dev";
+
+  // Remover /api final se existir e barras finais
+  return raw.replace(/\/api\/?$/i, "").replace(/\/+$/, "");
 }
 
 function isRetryable(method: string, path: string) {
@@ -44,7 +50,6 @@ async function proxy(req: NextRequest, pathParts: string[]) {
 
   // Copiar headers relevantes
   const headers = new Headers(req.headers);
-  headers.set("host", new URL(origin).host);
   stripHopByHop(headers);
   // Evitar repassar Accept-Encoding (Next/fetch lida com isso)
   headers.delete("accept-encoding");
@@ -78,7 +83,12 @@ async function proxy(req: NextRequest, pathParts: string[]) {
   } catch (e) {
     if (!retryable) throw e;
     await new Promise((r) => setTimeout(r, 350));
-    resp = await doFetch(15000);
+    try {
+      resp = await doFetch(15000);
+    } catch (e2) {
+      // Retornar erro útil para o cliente (em vez de 500 genérico)
+      return new Response(`Proxy error contacting backend (${targetUrl})`, { status: 502 });
+    }
   }
 
   // Se backend respondeu 5xx e for retryable, tenta 1x

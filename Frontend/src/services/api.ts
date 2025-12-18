@@ -135,6 +135,23 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
 
+    // Se o proxy /api (Next) retornar 5xx, tenta 1x direto no backend (Fly).
+    if (
+      status >= 500 &&
+      typeof url === "string" &&
+      url.startsWith("/api/") &&
+      originalRequest &&
+      !originalRequest.baseURL &&
+      !originalRequest._retryProxy5xx
+    ) {
+      const fallback = resolveFallbackOrigin();
+      if (fallback) {
+        originalRequest._retryProxy5xx = true;
+        originalRequest.baseURL = fallback;
+        return api(originalRequest);
+      }
+    }
+
     if (status !== 401 || isAuthEndpoint || originalRequest?._retry) {
       return Promise.reject(error);
     }
