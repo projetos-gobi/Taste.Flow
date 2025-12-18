@@ -1,5 +1,8 @@
 import { NextRequest } from "next/server";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 function getBackendOrigin() {
   // Preferir uma env server-side, mas aceitar NEXT_PUBLIC_API_URL para compatibilidade.
   // Fallback hardcoded garante que não quebra login se env não estiver configurada na Vercel.
@@ -87,7 +90,14 @@ async function proxy(req: NextRequest, pathParts: string[]) {
       resp = await doFetch(15000);
     } catch (e2) {
       // Retornar erro útil para o cliente (em vez de 500 genérico)
-      return new Response(`Proxy error contacting backend (${targetUrl})`, { status: 502 });
+      return Response.json(
+        {
+          error: "proxy_error",
+          message: "Falha ao contatar o backend (upstream) via proxy /api.",
+          upstream: targetUrl,
+        },
+        { status: 502 }
+      );
     }
   }
 
