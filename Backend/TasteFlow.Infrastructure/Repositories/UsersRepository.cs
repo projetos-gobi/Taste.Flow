@@ -84,7 +84,9 @@ namespace TasteFlow.Infrastructure.Repositories
                     await using var command = new NpgsqlCommand(
                         @"SELECT ""Id"", ""EmailAddress"", ""PasswordHash"", ""PasswordSalt"", ""Name"", ""AccessProfileId"", ""MustChangePassword""
                           FROM ""Users"" 
-                          WHERE LOWER(""EmailAddress"") = @email AND ""IsActive"" AND NOT ""IsDeleted""
+                          WHERE LOWER(""EmailAddress"") = @email
+                            AND COALESCE(""IsActive"", true)
+                            AND NOT COALESCE(""IsDeleted"", false)
                           LIMIT 1",
                         connection);
 
@@ -358,7 +360,7 @@ namespace TasteFlow.Infrastructure.Repositories
                         var selectSql = @"
                             SELECT ""Id"", ""Name"", ""EmailAddress"", ""AccessProfileId"", ""IsActive"" 
                             FROM ""Users"" 
-                            WHERE NOT ""IsDeleted"" 
+                            WHERE NOT COALESCE(""IsDeleted"", false)
                             LIMIT @pageSize OFFSET @offset";
 
                         var selectCommand = new NpgsqlCommand(selectSql, connection);
