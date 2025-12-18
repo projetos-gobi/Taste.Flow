@@ -115,33 +115,51 @@ export default function CreateUserPage() {
     router.push("/admin/usuarios")
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    if (isLoading) return;
+
     setIsLoading(true);
     session.setRefresh(false);
 
     try {
-      const usersRequest = users.map(user => ({
+      const usersRequest = users.map((user) => ({
         ...user,
-        enterpriseId: (enterpriseSelected.id !== "")? enterpriseSelected.id : null,
-        isActive: isActive
+        enterpriseId: enterpriseSelected.id !== "" ? enterpriseSelected.id : null,
+        isActive: isActive,
       }));
 
-      const response = await createUsersRange({ users: usersRequest, enterpriseId: ((enterpriseSelected.id !== "")? enterpriseSelected.id : null) });
+      const response = await createUsersRange({
+        users: usersRequest,
+        enterpriseId: enterpriseSelected.id !== "" ? enterpriseSelected.id : null,
+      });
 
-      if(response.created){
-        toast.success("Usuários criados com sucesso!");
-        router.push("/admin/usuarios")
-      }else{
-        toast.error("Falha ao criar ao criar os usuários. Tente novamente.");
-      } 
-    } catch (error) {
+      // Robustez: caso algum deploy/ambiente retorne PascalCase por qualquer motivo.
+      const created = Boolean((response as any)?.created ?? (response as any)?.Created);
+      const message =
+        ((response as any)?.message ?? (response as any)?.Message ?? "").toString().trim();
+
+      if (created) {
+        toast.success(message || "Usuários criados com sucesso!");
+        session.setRefresh(true);
+        router.push("/admin/usuarios");
+        return;
+      }
+
+      toast.error(message || "Não foi possível criar os usuários. Tente novamente.");
+    } catch (error: any) {
+      const apiErrors = error?.response?.data?.errors;
+      const apiMessage = error?.response?.data?.data?.message;
+      const msg =
+        (Array.isArray(apiErrors) && apiErrors.length > 0 ? apiErrors[0] : undefined) ||
+        apiMessage ||
+        "Erro ao salvar usuários. Tente novamente.";
+
+      toast.error(String(msg));
       console.error("Erro ao salvar usuários:", error);
     } finally {
-      session.setRefresh(true);
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleBack = () => {
     router.push("/admin/usuarios");
@@ -377,11 +395,11 @@ export default function CreateUserPage() {
             Cancelar
           </Button>
           <Button
-            disabled={isAnyUserInvalid}
+            disabled={isAnyUserInvalid || isLoading}
             onClick={handleSubmit}
             className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-2 font-body w-full sm:w-auto"
           >
-            Confirmar Cadastro
+            {isLoading ? "Salvando..." : "Confirmar Cadastro"}
           </Button>
         </div>
       </div>
