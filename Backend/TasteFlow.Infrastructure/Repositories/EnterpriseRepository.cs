@@ -85,12 +85,12 @@ namespace TasteFlow.Infrastructure.Repositories
                                 SELECT COUNT(*) 
                                 FROM ""UserEnterprise"" ue
                                 WHERE ue.""EnterpriseId"" = e.""Id""
-                                AND ue.""IsActive"" 
-                                AND NOT ue.""IsDeleted"" 
+                                AND COALESCE(ue.""IsActive"", true)
+                                AND NOT COALESCE(ue.""IsDeleted"", false)
                                 AND ue.""LicenseManagementId"" IS NOT NULL
                             ), 0) AS UsedLicenses
                         FROM ""Enterprise"" e
-                        WHERE e.""IsActive"" AND NOT e.""IsDeleted""";
+                        WHERE COALESCE(e.""IsActive"", true) AND NOT COALESCE(e.""IsDeleted"", false)";
 
                     var command = new NpgsqlCommand(sql, connection);
                     command.CommandTimeout = 30;
