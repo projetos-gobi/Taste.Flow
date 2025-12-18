@@ -43,6 +43,19 @@ api.interceptors.response.use(
       url.includes("/api/Authentication/forgotpassword") ||
       url.includes("/api/Authentication/refresh-token");
 
+    // Retry 1x em timeout/rede (muito comum em mobile). Evita "canceled" após 15s.
+    // Obs: não aplicar para endpoints de auth para evitar loops.
+    const isTimeout =
+      error?.code === "ECONNABORTED" ||
+      /timeout/i.test(String(error?.message ?? ""));
+    const isNetworkError = !error?.response; // sem status/response
+
+    if ((isTimeout || isNetworkError) && !isAuthEndpoint && originalRequest && !originalRequest._retryNet) {
+      originalRequest._retryNet = true;
+      await new Promise((r) => setTimeout(r, 250));
+      return api(originalRequest);
+    }
+
     if (status !== 401 || isAuthEndpoint || originalRequest?._retry) {
       return Promise.reject(error);
     }
