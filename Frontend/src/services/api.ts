@@ -3,20 +3,27 @@ import Cookies from "js-cookie";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
-    Authorization: "",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,PUT,POST,DELETE,PATCH,OPTIONS",
-    "Access-Control-Allow-Headers":
-      "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers",
   },
 });
 
 api.interceptors.request.use((config) => {
   const token = Cookies.get("token");
+  const url = config.url ?? "";
+  const isAuthEndpoint =
+    url.includes("/api/Authentication/login") ||
+    url.includes("/api/Authentication/forgotpassword") ||
+    url.includes("/api/Authentication/refresh-token");
+
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    // Não enviar Bearer no login/refresh: evita validação desnecessária e pode reduzir latência.
+    if (!isAuthEndpoint) {
+      config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      delete (config.headers as any).Authorization;
+    }
   }
   return config;
 });
