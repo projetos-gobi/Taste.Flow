@@ -63,18 +63,13 @@ export async function POST(req: NextRequest) {
           e."LicenseQuantity", e."HasUnlimitedLicenses"
       `;
 
-      const command = {
-        text: sql,
-        rowMode: "array" as const,
-      };
-
       const result = await client.query(sql);
 
       // Mapear resultados (mesmo formato do .NET)
       const enterprises = result.rows.map((row) => {
-        const licenseQuantity = row.LicenseQuantity != null ? parseInt(row.LicenseQuantity, 10) : null;
+        const licenseQuantity = row.LicenseQuantity != null ? parseInt(String(row.LicenseQuantity), 10) : null;
         const hasUnlimitedLicenses = row.HasUnlimitedLicenses === true;
-        const usedLicenses = row.UsedLicenses != null ? parseInt(row.UsedLicenses, 10) : 0;
+        const usedLicenses = row.UsedLicenses != null ? parseInt(String(row.UsedLicenses), 10) : 0;
 
         // Calcular LicenseQuantity disponível (mesma lógica do .NET)
         const availableLicenses = hasUnlimitedLicenses 
@@ -82,8 +77,8 @@ export async function POST(req: NextRequest) {
           : (licenseQuantity ?? 0) - usedLicenses;
 
         return {
-          id: row.Id,
-          licenseId: row.LicenseId || null,
+          id: String(row.Id),
+          licenseId: row.LicenseId ? String(row.LicenseId) : null,
           fantasyName: row.FantasyName || "",
           socialReason: row.SocialReason || null,
           cnpj: row.Cnpj || null,
