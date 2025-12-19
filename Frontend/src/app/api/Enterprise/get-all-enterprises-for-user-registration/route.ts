@@ -89,10 +89,11 @@ export async function POST(req: NextRequest) {
 
       const elapsed = Date.now() - startTime;
 
+      // Frontend espera array direto (response.data.data retorna o array)
       return NextResponse.json(
         {
           success: true,
-          data: enterprises,
+          data: enterprises, // Array de empresas
         },
         {
           status: 200,
