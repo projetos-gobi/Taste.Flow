@@ -139,29 +139,24 @@ export async function POST(req: NextRequest) {
       // Validar senha (SHA256 + salt)
       const passwordHash = toSha256Hash(password, user.PasswordSalt);
       
-      // Debug: log para verificar hash (apenas em desenvolvimento)
-      if (process.env.NODE_ENV === "development") {
-        console.log("[LOGIN DEBUG]", {
-          email,
-          passwordLength: password.length,
-          saltLength: user.PasswordSalt?.length,
-          computedHash: passwordHash.substring(0, 20) + "...",
-          storedHash: user.PasswordHash?.substring(0, 20) + "...",
-          hashesMatch: passwordHash === user.PasswordHash,
-        });
-      }
+      // Debug: log para verificar hash (sempre logar para debug)
+      console.log("[LOGIN DEBUG]", {
+        email,
+        passwordLength: password.length,
+        saltLength: user.PasswordSalt?.length,
+        saltPreview: user.PasswordSalt?.substring(0, 10) + "...",
+        computedHashPreview: passwordHash.substring(0, 20) + "...",
+        storedHashPreview: user.PasswordHash?.substring(0, 20) + "...",
+        hashesMatch: passwordHash === user.PasswordHash,
+        hashLength: passwordHash.length,
+        storedHashLength: user.PasswordHash?.length,
+      });
       
       if (passwordHash !== user.PasswordHash) {
         return NextResponse.json(
           { 
             success: false, 
             message: "Credenciais inválidas.",
-            // Debug apenas em desenvolvimento
-            debug: process.env.NODE_ENV === "development" ? {
-              hashLength: passwordHash.length,
-              storedHashLength: user.PasswordHash?.length,
-              saltLength: user.PasswordSalt?.length,
-            } : undefined,
           },
           { status: 401 }
         );
