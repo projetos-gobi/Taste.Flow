@@ -47,14 +47,15 @@ api.interceptors.request.use((config) => {
     config.timeout = 6000;
   }
 
-  // Login e User endpoints: agora estão em Next.js API Routes - same-origin, sem proxy
+  // Login, User e Enterprise endpoints: agora estão em Next.js API Routes - same-origin, sem proxy
   if (
     url.includes("/api/Authentication/login") ||
     url.includes("/api/User/get-users-paged") ||
     url.includes("/api/User/get-user-by-id") ||
     url.includes("/api/User/create-users-range") ||
     url.includes("/api/User/update-user") ||
-    url.includes("/api/User/soft-delete-user")
+    url.includes("/api/User/soft-delete-user") ||
+    url.includes("/api/Enterprise/get-all-enterprises-for-user-registration")
   ) {
     config.timeout = 5000; // Timeout menor para endpoints locais
     // Forçar same-origin (bypass proxy e Fly.io completamente)
