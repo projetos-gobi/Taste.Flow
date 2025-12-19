@@ -67,15 +67,17 @@ export function EditUserModal({ isOpen }: EditUserModalProps) {
         isActive: data.isActive,
       });
     } catch (error) {
-      console.error("Erro ao buscar empresa:", error);
+      console.error("Erro ao buscar usuário:", error);
+      toast.error("Erro ao carregar dados do usuário.");
     }
   };
 
   useEffect(() => {
-    if (isOpen) {
-      fetchUser();
+    if (isOpen && userEditModal.userId) {
+      setIsLoading(true);
+      fetchUser().finally(() => setIsLoading(false));
     }
-  }, [isOpen]);
+  }, [isOpen, userEditModal.userId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,36 +122,39 @@ export function EditUserModal({ isOpen }: EditUserModalProps) {
           <DialogTitle className="text-xl font-heading font-bold">Editar Usuário</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="font-body">
-                Nome do Usuário *
-              </Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleChange("name", e.target.value)}
-                placeholder="Digite o nome do usuário"
-                required
-                className="font-body"
-              />
-            </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-sm text-gray-500">Carregando dados do usuário...</div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="font-body">
+                  Nome do Usuário *
+                </Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleChange("name", e.target.value)}
+                  placeholder="Digite o nome do usuário"
+                  required
+                  className="font-body"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="company" className="font-body">
-                Empresa *
-              </Label>
-              <Input
-                id="company"
-                value={formData.enterpriseName ?? ""}
-                disabled={true}
-                onChange={(e) => handleChange("enterpriseName", e.target.value)}
-                placeholder="Digite o nome da empresa"
-                required
-                className="font-body"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="company" className="font-body">
+                  Empresa
+                </Label>
+                <Input
+                  id="company"
+                  value={formData.enterpriseName ?? ""}
+                  disabled={true}
+                  placeholder="Nenhuma empresa associada"
+                  className="font-body bg-gray-50"
+                />
+              </div>
 
             <div className="space-y-2">
               <Label htmlFor="email" className="font-body">
@@ -174,9 +179,8 @@ export function EditUserModal({ isOpen }: EditUserModalProps) {
                 id="signature"
                 disabled={true}
                 value={formData.licenseName ?? ""}
-                onChange={(e) => handleChange("licenseName", e.target.value)}
-                placeholder="Digite a assinatura"
-                className="font-body"
+                placeholder="Nenhuma assinatura associada"
+                className="font-body bg-gray-50"
               />
             </div>
 
@@ -223,15 +227,16 @@ export function EditUserModal({ isOpen }: EditUserModalProps) {
             </Label>
           </div>
 
-          <div className="flex justify-end space-x-4 pt-4">
-            <Button type="button" variant="outline" onClick={handleClose} className="font-body bg-transparent">
-              Cancelar
-            </Button>
-            <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white font-body">
-              Salvar Alterações
-            </Button>
-          </div>
-        </form>
+            <div className="flex justify-end space-x-4 pt-4">
+              <Button type="button" variant="outline" onClick={handleClose} className="font-body bg-transparent" disabled={isLoading}>
+                Cancelar
+              </Button>
+              <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white font-body" disabled={isLoading}>
+                {isLoading ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </div>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   )
