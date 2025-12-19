@@ -75,15 +75,15 @@ export async function POST(req: NextRequest) {
 
       const elapsed = Date.now() - startTime;
 
+      // Formato compatível com PagedResult<T> do .NET
       return NextResponse.json(
         {
           success: true,
           data: {
-            items: users,
-            totalCount: totalCount,
+            count: totalCount, // .NET usa "Count"
+            items: users, // .NET usa "Items"
             page: page,
             pageSize: pageSize,
-            totalPages: Math.ceil(totalCount / pageSize),
           },
         },
         {
