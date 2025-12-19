@@ -119,8 +119,10 @@ export async function POST(req: NextRequest) {
       await client.query("BEGIN");
       console.log("[CREATE USERS] Transaction started");
 
-      const systemUserId = "8f6a55e6-a763-4f13-9b58-9cea44e1836c";
-      console.log("[CREATE USERS] SystemUserId set");
+      // Usar o ID do usuário admin que existe no banco (não o GUID hardcoded que não existe)
+      // O admin é: aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+      const systemUserId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+      console.log("[CREATE USERS] SystemUserId set:", systemUserId);
       
       const now = new Date().toISOString();
       console.log("[CREATE USERS] Now timestamp:", now);
