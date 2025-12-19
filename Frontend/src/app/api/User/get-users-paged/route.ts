@@ -43,12 +43,12 @@ export async function POST(req: NextRequest) {
     try {
       const offset = (page - 1) * pageSize;
 
-      // Query SQL (mesma do .NET)
+      // Query SQL (mesma do .NET - sem ORDER BY explícito, sem filtros aplicados ainda)
+      // Nota: O .NET não aplica filtros do UserFilter no GetUsersPagedDirectAsync atualmente
       const selectSql = `
         SELECT "Id", "Name", "EmailAddress", "AccessProfileId", "IsActive"
         FROM "Users"
         WHERE NOT COALESCE("IsDeleted", false)
-        ORDER BY "Name" ASC
         LIMIT $1 OFFSET $2
       `;
 
