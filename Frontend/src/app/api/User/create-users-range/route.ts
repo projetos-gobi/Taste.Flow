@@ -59,9 +59,12 @@ function generateLicenseCode(length: number = 16): string {
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
+  console.log("[CREATE USERS] Starting...");
 
   try {
     const body = await req.json();
+    console.log("[CREATE USERS] Body received", { usersCount: (body.users || body.Users || []).length, hasEnterpriseId: !!(body.enterpriseId || body.EnterpriseId) });
+    
     const users = body.users || body.Users || [];
     const enterpriseId = body.enterpriseId || body.EnterpriseId || null;
 
@@ -107,17 +110,24 @@ export async function POST(req: NextRequest) {
     }
 
     const db = getPool();
+    console.log("[CREATE USERS] Getting database connection...");
     const client = await db.connect();
+    console.log("[CREATE USERS] Database connection acquired");
 
     try {
+      console.log("[CREATE USERS] Starting transaction...");
       await client.query("BEGIN");
+      console.log("[CREATE USERS] Transaction started");
 
       const systemUserId = "8f6a55e6-a763-4f13-9b58-9cea44e1836c";
       const now = new Date().toISOString();
       const createdUserIds: string[] = [];
 
       // Criar usuários
-      for (const user of users) {
+      console.log(`[CREATE USERS] Creating ${users.length} users...`);
+      for (let i = 0; i < users.length; i++) {
+        const user = users[i];
+        console.log(`[CREATE USERS] Creating user ${i + 1}/${users.length}: ${user.name || user.Name || "N/A"}`);
         const userId = crypto.randomUUID();
         const passwordSalt = crypto.randomUUID();
         const randomPassword = generateRandomPassword(12);
@@ -147,8 +157,11 @@ export async function POST(req: NextRequest) {
         createdUserIds.push(userId);
       }
 
+      console.log(`[CREATE USERS] Users created: ${createdUserIds.length}`);
+
       // Se houver EnterpriseId, criar licenças e vínculos
       if (enterpriseId) {
+        console.log(`[CREATE USERS] EnterpriseId provided: ${enterpriseId}, creating licenses...`);
         // Buscar empresa
         const enterpriseResult = await client.query(
           `SELECT "Id", "LicenseId", "LicenseQuantity", "HasUnlimitedLicenses"
@@ -232,9 +245,12 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      console.log("[CREATE USERS] Committing transaction...");
       await client.query("COMMIT");
+      console.log("[CREATE USERS] Transaction committed successfully");
 
       const elapsed = Date.now() - startTime;
+      console.log(`[CREATE USERS] Total time: ${elapsed}ms`);
 
       return NextResponse.json(
         {
@@ -256,7 +272,12 @@ export async function POST(req: NextRequest) {
         }
       );
     } catch (error: any) {
-      await client.query("ROLLBACK");
+      console.error("[CREATE USERS] Error in transaction, rolling back...", error);
+      try {
+        await client.query("ROLLBACK");
+      } catch (rollbackError: any) {
+        console.error("[CREATE USERS] Rollback error:", rollbackError);
+      }
       throw error;
     } finally {
       client.release();
