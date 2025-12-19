@@ -153,6 +153,7 @@ export async function POST(req: NextRequest) {
       });
       
       if (passwordHash !== user.PasswordHash) {
+        console.log("[LOGIN] Hash mismatch - returning 401");
         return NextResponse.json(
           { 
             success: false, 
@@ -162,31 +163,46 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // Buscar EnterpriseId (se existir)
-      const enterpriseResult = await client.query(
-        `SELECT "EnterpriseId"
-         FROM "UserEnterprise"
-         WHERE "UserId" = $1
-           AND COALESCE("IsActive", true) = true
-           AND NOT COALESCE("IsDeleted", false) = true
-         LIMIT 1`,
-        [user.Id]
-      );
+      console.log("[LOGIN] Password validated, fetching enterprise and password code...");
 
-      const enterpriseId = enterpriseResult.rows[0]?.EnterpriseId || null;
+      // Buscar EnterpriseId (se existir)
+      let enterpriseId = null;
+      try {
+        const enterpriseResult = await client.query(
+          `SELECT "EnterpriseId"
+           FROM "UserEnterprise"
+           WHERE "UserId" = $1
+             AND COALESCE("IsActive", true) = true
+             AND NOT COALESCE("IsDeleted", false) = true
+           LIMIT 1`,
+          [user.Id]
+        );
+        enterpriseId = enterpriseResult.rows[0]?.EnterpriseId || null;
+        console.log("[LOGIN] EnterpriseId fetched:", enterpriseId);
+      } catch (enterpriseError: any) {
+        console.error("[LOGIN] Error fetching EnterpriseId:", enterpriseError);
+        // Continua sem enterpriseId
+      }
 
       // Buscar changePasswordCode (se existir)
-      const passwordMgmtResult = await client.query(
-        `SELECT "Code"
-         FROM "UserPasswordManagement"
-         WHERE "UserId" = $1
-         ORDER BY "CreatedOn" DESC
-         LIMIT 1`,
-        [user.Id]
-      );
+      let changePasswordCode = null;
+      try {
+        const passwordMgmtResult = await client.query(
+          `SELECT "Code"
+           FROM "UserPasswordManagement"
+           WHERE "UserId" = $1
+           ORDER BY "CreatedOn" DESC
+           LIMIT 1`,
+          [user.Id]
+        );
+        changePasswordCode = passwordMgmtResult.rows[0]?.Code || null;
+        console.log("[LOGIN] ChangePasswordCode fetched:", changePasswordCode ? "exists" : "null");
+      } catch (passwordCodeError: any) {
+        console.error("[LOGIN] Error fetching ChangePasswordCode:", passwordCodeError);
+        // Continua sem changePasswordCode
+      }
 
-      const changePasswordCode = passwordMgmtResult.rows[0]?.Code || null;
-
+      console.log("[LOGIN] Generating JWT...");
       // Gerar JWT
       const token = generateToken({
         id: user.Id,
@@ -197,6 +213,7 @@ export async function POST(req: NextRequest) {
         enterpriseId: enterpriseId,
         changePasswordCode: changePasswordCode,
       });
+      console.log("[LOGIN] JWT generated successfully");
 
       // Criar refresh token
       const refreshTokenId = crypto.randomUUID();
