@@ -74,8 +74,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const email = (body.email || "").trim().toLowerCase();
-    const password = body.password || "";
+    // Aceitar tanto Email/Password (frontend) quanto email/password (padrão)
+    const email = (body.Email || body.email || "").trim().toLowerCase();
+    const password = body.Password || body.password || "";
 
     if (!email || !password) {
       return NextResponse.json(
