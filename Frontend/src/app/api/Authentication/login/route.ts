@@ -254,6 +254,7 @@ export async function POST(req: NextRequest) {
         elapsed: `${elapsed}ms`,
       });
 
+      // Formato compatível com o backend .NET e frontend
       return NextResponse.json(
         {
           success: true,
@@ -263,8 +264,10 @@ export async function POST(req: NextRequest) {
             userId: user.Id,
             email: user.EmailAddress,
             name: user.Name,
+            role: user.AccessProfileId, // Frontend espera 'role' (AccessProfileId)
             accessProfileId: user.AccessProfileId,
             enterpriseId: enterpriseId,
+            authenticationStatus: "Success", // Frontend verifica isso
           },
           message: "Autenticação realizada com sucesso.",
         },
