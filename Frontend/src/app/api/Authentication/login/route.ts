@@ -22,6 +22,10 @@ function getPool(): Pool {
     max: 5, // Pool pequeno para serverless
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
+    // Configurar SSL para aceitar certificados do Supabase
+    ssl: {
+      rejectUnauthorized: false, // Supabase usa certificado auto-assinado
+    },
   });
 
   return pool;
