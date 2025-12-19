@@ -120,8 +120,13 @@ export async function POST(req: NextRequest) {
       console.log("[CREATE USERS] Transaction started");
 
       const systemUserId = "8f6a55e6-a763-4f13-9b58-9cea44e1836c";
+      console.log("[CREATE USERS] SystemUserId set");
+      
       const now = new Date().toISOString();
+      console.log("[CREATE USERS] Now timestamp:", now);
+      
       const createdUserIds: string[] = [];
+      console.log("[CREATE USERS] CreatedUserIds array initialized");
 
       // Criar usuários
       console.log(`[CREATE USERS] Creating ${users.length} users...`);
