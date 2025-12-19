@@ -1,0 +1,279 @@
+import { NextRequest, NextResponse } from "next/server";
+import { Pool } from "pg";
+import crypto from "crypto";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+// Pool de conexões PostgreSQL (singleton - reutilizar do login)
+let pool: Pool | null = null;
+
+function getPool(): Pool {
+  if (pool) return pool;
+
+  const connectionString =
+    process.env.DATABASE_URL ||
+    "postgresql://postgres.twcwycecokaiiaeptndq:vmedxADqPy5mDBgG@aws-1-sa-east-1.pooler.supabase.com:6543/postgres";
+
+  pool = new Pool({
+    connectionString,
+    max: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  });
+
+  return pool;
+}
+
+// SHA256 hash (mesma lógica do .NET)
+function toSha256Hash(password: string, salt: string): string {
+  const trimmedPassword = (password || "").trim();
+  const saltStr = (salt || "").toString();
+  const hash = crypto.createHash("sha256");
+  hash.update(trimmedPassword + saltStr, "utf8");
+  return hash.digest("hex");
+}
+
+// Gerar senha aleatória (mesma lógica do .NET)
+function generateRandomPassword(length: number): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789$&#@*";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+// Gerar código de licença (mesma lógica do .NET)
+function generateLicenseCode(length: number = 16): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+
+  try {
+    const body = await req.json();
+    const users = body.users || body.Users || [];
+    const enterpriseId = body.enterpriseId || body.EnterpriseId || null;
+
+    if (!Array.isArray(users) || users.length === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          data: {
+            created: false,
+            message: "Nenhum usuário fornecido.",
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validar emails duplicados (mesma regra do .NET)
+    const emailMap = new Map<string, number>();
+    const duplicatedEmails: string[] = [];
+    
+    for (const user of users) {
+      const email = (user.emailAddress || user.EmailAddress || "").toLowerCase().trim();
+      if (email) {
+        const count = (emailMap.get(email) || 0) + 1;
+        emailMap.set(email, count);
+        if (count === 2) {
+          duplicatedEmails.push(email);
+        }
+      }
+    }
+
+    if (duplicatedEmails.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          data: {
+            created: false,
+            message: `Os seguintes e-mails estão duplicados: ${duplicatedEmails.join(", ")}`,
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    const db = getPool();
+    const client = await db.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const systemUserId = "8f6a55e6-a763-4f13-9b58-9cea44e1836c";
+      const now = new Date().toISOString();
+      const createdUserIds: string[] = [];
+
+      // Criar usuários
+      for (const user of users) {
+        const userId = crypto.randomUUID();
+        const passwordSalt = crypto.randomUUID();
+        const randomPassword = generateRandomPassword(12);
+        const passwordHash = toSha256Hash(randomPassword, passwordSalt);
+
+        await client.query(
+          `INSERT INTO "Users"
+           ("Id", "AccessProfileId", "Name", "EmailAddress", "Contact", "PasswordHash", "PasswordSalt",
+            "CreatedOn", "CreatedBy", "IsActive", "IsDeleted", "MustChangePassword")
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [
+            userId,
+            user.accessProfileId || user.AccessProfileId,
+            user.name || user.Name || "",
+            user.emailAddress || user.EmailAddress || "",
+            user.contact || user.Contact || "",
+            passwordHash,
+            passwordSalt,
+            now,
+            systemUserId,
+            user.isActive !== undefined ? user.isActive : true,
+            false,
+            true, // MustChangePassword = true para novos usuários
+          ]
+        );
+
+        createdUserIds.push(userId);
+      }
+
+      // Se houver EnterpriseId, criar licenças e vínculos
+      if (enterpriseId) {
+        // Buscar empresa
+        const enterpriseResult = await client.query(
+          `SELECT "Id", "LicenseId", "LicenseQuantity", "HasUnlimitedLicenses"
+           FROM "Enterprise"
+           WHERE "Id" = $1
+             AND COALESCE("IsActive", true) = true
+             AND NOT COALESCE("IsDeleted", false) = true`,
+          [enterpriseId]
+        );
+
+        if (enterpriseResult.rows.length > 0) {
+          const enterprise = enterpriseResult.rows[0];
+          const licenseId = enterprise.LicenseId;
+          const licenseQuantity = enterprise.LicenseQuantity || 0;
+          const hasUnlimitedLicenses = enterprise.HasUnlimitedLicenses === true;
+
+          // Contar licenças existentes
+          const existingLicensesResult = await client.query(
+            `SELECT COUNT(*) FROM "LicenseManagement"
+             WHERE "EnterpriseId" = $1 AND NOT COALESCE("IsDeleted", false) = true`,
+            [enterpriseId]
+          );
+          const currentCount = parseInt(existingLicensesResult.rows[0].count, 10);
+
+          // Validar se pode adicionar mais licenças
+          const canAdd = hasUnlimitedLicenses || currentCount + users.length <= licenseQuantity;
+
+          if (canAdd) {
+            // Criar LicenseManagements
+            const licenseManagementIds: string[] = [];
+            for (let i = 0; i < users.length; i++) {
+              const licenseId_uuid = crypto.randomUUID();
+              const licenseCode = generateLicenseCode(10);
+              const expirationDate = new Date();
+              expirationDate.setFullYear(expirationDate.getFullYear() + 2);
+
+              await client.query(
+                `INSERT INTO "LicenseManagement"
+                 ("Id", "EnterpriseId", "LicenseId", "LicenseCode", "ExpirationDate", "IsIndefinite",
+                  "CreatedOn", "CreatedBy", "IsActive", "IsDeleted")
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+                [
+                  licenseId_uuid,
+                  enterpriseId,
+                  licenseId,
+                  licenseCode,
+                  expirationDate.toISOString(),
+                  false,
+                  now,
+                  systemUserId,
+                  true,
+                  false,
+                ]
+              );
+
+              licenseManagementIds.push(licenseId_uuid);
+            }
+
+            // Criar UserEnterprises
+            for (let i = 0; i < createdUserIds.length; i++) {
+              const userEnterpriseId = crypto.randomUUID();
+              await client.query(
+                `INSERT INTO "UserEnterprise"
+                 ("Id", "UserId", "EnterpriseId", "LicenseManagementId", "ProfileTypeId",
+                  "CreatedOn", "CreatedBy", "IsActive", "IsDeleted")
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+                [
+                  userEnterpriseId,
+                  createdUserIds[i],
+                  enterpriseId,
+                  licenseManagementIds[i],
+                  null,
+                  now,
+                  systemUserId,
+                  true,
+                  false,
+                ]
+              );
+            }
+          }
+        }
+      }
+
+      await client.query("COMMIT");
+
+      const elapsed = Date.now() - startTime;
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            created: createdUserIds.length > 0,
+            message:
+              createdUserIds.length > 0
+                ? "Usuários criados com sucesso."
+                : "Não foi possível criar os usuários no sistema.",
+          },
+        },
+        {
+          status: 200,
+          headers: {
+            "X-Request-Id": crypto.randomUUID(),
+            "Server-Timing": `app;dur=${elapsed}`,
+          },
+        }
+      );
+    } catch (error: any) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error: any) {
+    console.error("[CREATE USERS RANGE ERROR]", error);
+    return NextResponse.json(
+      {
+        success: false,
+        data: {
+          created: false,
+          message: "Ocorreu um erro durante o processo de criação de usuários.",
+          error: String(error?.message || error),
+        },
+      },
+      { status: 500 }
+    );
+  }
+}
+

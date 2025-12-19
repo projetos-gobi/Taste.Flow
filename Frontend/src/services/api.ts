@@ -57,7 +57,7 @@ api.interceptors.request.use((config) => {
     url.includes("/api/User/soft-delete-user") ||
     url.includes("/api/Enterprise/get-all-enterprises-for-user-registration")
   ) {
-    config.timeout = 5000; // Timeout menor para endpoints locais
+    config.timeout = 8000; // Timeout maior para operações de escrita (create-users-range)
     // Forçar same-origin (bypass proxy e Fly.io completamente)
     config.baseURL = undefined;
   }
