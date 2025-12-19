@@ -128,12 +128,15 @@ export async function POST(req: NextRequest) {
       for (let i = 0; i < users.length; i++) {
         const user = users[i];
         console.log(`[CREATE USERS] Creating user ${i + 1}/${users.length}: ${user.name || user.Name || "N/A"}`);
+        
         const userId = crypto.randomUUID();
         const passwordSalt = crypto.randomUUID();
         const randomPassword = generateRandomPassword(12);
         const passwordHash = toSha256Hash(randomPassword, passwordSalt);
 
-        await client.query(
+        console.log(`[CREATE USERS] User ${i + 1} prepared, executing INSERT...`);
+        try {
+          await client.query(
           `INSERT INTO "Users"
            ("Id", "AccessProfileId", "Name", "EmailAddress", "Contact", "PasswordHash", "PasswordSalt",
             "CreatedOn", "CreatedBy", "IsActive", "IsDeleted", "MustChangePassword")
@@ -153,6 +156,11 @@ export async function POST(req: NextRequest) {
             true, // MustChangePassword = true para novos usuários
           ]
         );
+        console.log(`[CREATE USERS] User ${i + 1} inserted successfully`);
+        } catch (userError: any) {
+          console.error(`[CREATE USERS] Error inserting user ${i + 1}:`, userError);
+          throw userError;
+        }
 
         createdUserIds.push(userId);
       }
@@ -161,7 +169,7 @@ export async function POST(req: NextRequest) {
 
       // Se houver EnterpriseId, criar licenças e vínculos
       if (enterpriseId) {
-        console.log(`[CREATE USERS] EnterpriseId provided: ${enterpriseId}, creating licenses...`);
+        console.log(`[CREATE USERS] EnterpriseId provided: ${enterpriseId}, fetching enterprise...`);
         // Buscar empresa
         const enterpriseResult = await client.query(
           `SELECT "Id", "LicenseId", "LicenseQuantity", "HasUnlimitedLicenses"
@@ -171,6 +179,7 @@ export async function POST(req: NextRequest) {
              AND NOT COALESCE("IsDeleted", false) = true`,
           [enterpriseId]
         );
+        console.log(`[CREATE USERS] Enterprise query result: ${enterpriseResult.rows.length} rows`);
 
         if (enterpriseResult.rows.length > 0) {
           const enterprise = enterpriseResult.rows[0];
