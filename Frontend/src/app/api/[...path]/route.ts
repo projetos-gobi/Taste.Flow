@@ -39,7 +39,7 @@ function stripHopByHop(headers: Headers) {
   hop.forEach((h) => headers.delete(h));
 }
 
-async function proxy(req: NextRequest, pathParts: string[]) {
+async function proxy(req: NextRequest, pathParts: string[] | undefined) {
   try {
     const origin = getBackendOrigin();
     if (!origin) {
@@ -49,8 +49,15 @@ async function proxy(req: NextRequest, pathParts: string[]) {
       );
     }
 
+    // Extrair pathParts do URL se não vier nos params (fallback seguro)
+    if (!pathParts || pathParts.length === 0) {
+      const inUrl = new URL(req.url);
+      const pathMatch = inUrl.pathname.match(/^\/api\/(.+)$/);
+      pathParts = pathMatch ? pathMatch[1].split("/").filter(Boolean) : [];
+    }
+
     const inUrl = new URL(req.url);
-    const apiPath = "/" + pathParts.join("/");
+    const apiPath = "/" + (pathParts.length > 0 ? pathParts.join("/") : "");
     const targetUrl = `${origin}/api${apiPath}${inUrl.search}`;
 
     const method = req.method.toUpperCase();
@@ -135,23 +142,29 @@ async function proxy(req: NextRequest, pathParts: string[]) {
   }
 }
 
-export async function GET(req: NextRequest, ctx: { params: { path: string[] } }) {
-  return proxy(req, ctx.params.path);
+export async function GET(req: NextRequest, ctx: { params: Promise<{ path: string[] }> | { path: string[] } }) {
+  const params = await Promise.resolve(ctx.params);
+  return proxy(req, params?.path);
 }
-export async function POST(req: NextRequest, ctx: { params: { path: string[] } }) {
-  return proxy(req, ctx.params.path);
+export async function POST(req: NextRequest, ctx: { params: Promise<{ path: string[] }> | { path: string[] } }) {
+  const params = await Promise.resolve(ctx.params);
+  return proxy(req, params?.path);
 }
-export async function PUT(req: NextRequest, ctx: { params: { path: string[] } }) {
-  return proxy(req, ctx.params.path);
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ path: string[] }> | { path: string[] } }) {
+  const params = await Promise.resolve(ctx.params);
+  return proxy(req, params?.path);
 }
-export async function PATCH(req: NextRequest, ctx: { params: { path: string[] } }) {
-  return proxy(req, ctx.params.path);
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ path: string[] }> | { path: string[] } }) {
+  const params = await Promise.resolve(ctx.params);
+  return proxy(req, params?.path);
 }
-export async function DELETE(req: NextRequest, ctx: { params: { path: string[] } }) {
-  return proxy(req, ctx.params.path);
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ path: string[] }> | { path: string[] } }) {
+  const params = await Promise.resolve(ctx.params);
+  return proxy(req, params?.path);
 }
-export async function OPTIONS(req: NextRequest, ctx: { params: { path: string[] } }) {
-  return proxy(req, ctx.params.path);
+export async function OPTIONS(req: NextRequest, ctx: { params: Promise<{ path: string[] }> | { path: string[] } }) {
+  const params = await Promise.resolve(ctx.params);
+  return proxy(req, params?.path);
 }
 
 
