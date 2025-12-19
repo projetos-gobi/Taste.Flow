@@ -47,17 +47,11 @@ api.interceptors.request.use((config) => {
     config.timeout = 6000;
   }
 
-  // Login: timeout menor + chamar direto no Fly (bypass proxy) para reduzir latência
+  // Login: agora está em Next.js API Route (/api/Authentication/login) - same-origin, sem proxy
   if (url.includes("/api/Authentication/login")) {
-    config.timeout = 6000;
-    // Bypass proxy: chamar Fly.io direto para login (elimina 1 hop)
-    const directBackend = process.env.NEXT_PUBLIC_API_URL;
-    if (directBackend && typeof window !== "undefined") {
-      const host = window.location.host.toLowerCase();
-      if (host.includes("vercel.app") || host.includes("taste-flow")) {
-        config.baseURL = directBackend;
-      }
-    }
+    config.timeout = 5000; // Timeout menor para login local
+    // Forçar same-origin (bypass proxy e Fly.io completamente)
+    config.baseURL = undefined;
   }
 
   if (token) {
