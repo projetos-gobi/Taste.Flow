@@ -13,9 +13,12 @@ function getPool(): Pool {
   if (pool) return pool;
 
   // Connection string do Supabase (mesma do backend)
-  const connectionString =
+  const rawConnectionString =
     process.env.DATABASE_URL ||
-    "postgresql://postgres.twcwycecokaiiaeptndq:vmedxADqPy5mDBgG@aws-1-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require&pooling=true&min_pool_size=1&max_pool_size=5";
+    "postgresql://postgres.twcwycecokaiiaeptndq:vmedxADqPy5mDBgG@aws-1-sa-east-1.pooler.supabase.com:6543/postgres";
+  
+  // Remover parâmetros SSL da URL (vamos configurar via objeto Pool)
+  const connectionString = rawConnectionString.split("?")[0];
 
   pool = new Pool({
     connectionString,
@@ -23,9 +26,10 @@ function getPool(): Pool {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
     // Configurar SSL para aceitar certificados do Supabase
-    ssl: {
-      rejectUnauthorized: false, // Supabase usa certificado auto-assinado
-    },
+    // IMPORTANTE: ssl deve ser um objeto, não uma string
+    ssl: process.env.NODE_ENV === "production" 
+      ? { rejectUnauthorized: false } // Produção: aceitar certificado auto-assinado do Supabase
+      : { rejectUnauthorized: false }, // Desenvolvimento também
   });
 
   return pool;
