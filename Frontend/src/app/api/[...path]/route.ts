@@ -93,9 +93,13 @@ async function proxy(req: NextRequest, pathParts: string[] | undefined) {
     const retryable = isRetryable(method, `/api${apiPath}`);
 
     let resp: Response | null = null;
+    // Timeout reduzido: 5s para operações críticas (login), 8s para leituras
+    const timeoutMs = apiPath.includes("/Authentication/login") ? 5000 : 8000;
+    
     try {
-      resp = await doFetch(12000);
+      resp = await doFetch(timeoutMs);
     } catch (e) {
+      // Retry apenas 1x para operações críticas, sem delay desnecessário
       if (!retryable) {
         return Response.json(
           { error: "proxy_fetch_failed", message: "Falha ao chamar upstream.", upstream: targetUrl },
@@ -103,10 +107,18 @@ async function proxy(req: NextRequest, pathParts: string[] | undefined) {
         );
       }
 
-      await new Promise((r) => setTimeout(r, 350));
-      try {
-        resp = await doFetch(15000);
-      } catch (e2) {
+      // Retry rápido (150ms) apenas para login
+      if (apiPath.includes("/Authentication/login")) {
+        await new Promise((r) => setTimeout(r, 150));
+        try {
+          resp = await doFetch(timeoutMs);
+        } catch (e2) {
+          return Response.json(
+            { error: "proxy_error", message: "Falha ao contatar o backend (upstream) via proxy /api.", upstream: targetUrl },
+            { status: 502 }
+          );
+        }
+      } else {
         return Response.json(
           { error: "proxy_error", message: "Falha ao contatar o backend (upstream) via proxy /api.", upstream: targetUrl },
           { status: 502 }
@@ -114,11 +126,7 @@ async function proxy(req: NextRequest, pathParts: string[] | undefined) {
       }
     }
 
-    // Se backend respondeu 5xx e for retryable, tenta 1x
-    if (retryable && resp.status >= 500) {
-      await new Promise((r) => setTimeout(r, 250));
-      resp = await doFetch(15000);
-    }
+    // Remover retry para 5xx: deixa o Axios do frontend lidar com isso
 
     // Repasse de headers (inclui Server-Timing / X-TF-Server-Timing)
     const outHeaders = new Headers(resp.headers);

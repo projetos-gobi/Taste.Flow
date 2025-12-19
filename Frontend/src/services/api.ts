@@ -47,8 +47,17 @@ api.interceptors.request.use((config) => {
     config.timeout = 6000;
   }
 
+  // Login: timeout menor + chamar direto no Fly (bypass proxy) para reduzir latência
   if (url.includes("/api/Authentication/login")) {
-    config.timeout = 8000;
+    config.timeout = 6000;
+    // Bypass proxy: chamar Fly.io direto para login (elimina 1 hop)
+    const directBackend = process.env.NEXT_PUBLIC_API_URL;
+    if (directBackend && typeof window !== "undefined") {
+      const host = window.location.host.toLowerCase();
+      if (host.includes("vercel.app") || host.includes("taste-flow")) {
+        config.baseURL = directBackend;
+      }
+    }
   }
 
   if (token) {
