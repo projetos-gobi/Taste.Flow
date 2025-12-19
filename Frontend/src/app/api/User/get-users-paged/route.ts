@@ -43,12 +43,32 @@ export async function POST(req: NextRequest) {
     try {
       const offset = (page - 1) * pageSize;
 
-      // Query SQL (mesma do .NET - sem ORDER BY explícito, sem filtros aplicados ainda)
-      // Nota: O .NET não aplica filtros do UserFilter no GetUsersPagedDirectAsync atualmente
+      // Query SQL com JOINs para buscar todas as informações necessárias
       const selectSql = `
-        SELECT "Id", "Name", "EmailAddress", "AccessProfileId", "IsActive"
-        FROM "Users"
-        WHERE NOT COALESCE("IsDeleted", false)
+        SELECT 
+          u."Id",
+          u."Name",
+          u."EmailAddress",
+          u."AccessProfileId",
+          u."IsActive",
+          u."Contact",
+          ap."Name" AS "AccessProfileName",
+          e."FantasyName" AS "EnterpriseName",
+          l."Name" AS "LicenseName"
+        FROM "Users" u
+        LEFT JOIN "AccessProfile" ap ON ap."Id" = u."AccessProfileId"
+        LEFT JOIN "UserEnterprise" ue ON ue."UserId" = u."Id"
+          AND COALESCE(ue."IsActive", true) = true
+          AND NOT COALESCE(ue."IsDeleted", false) = true
+        LEFT JOIN "Enterprise" e ON e."Id" = ue."EnterpriseId"
+          AND COALESCE(e."IsActive", true) = true
+          AND NOT COALESCE(e."IsDeleted", false) = true
+        LEFT JOIN "LicenseManagement" lm ON lm."Id" = ue."LicenseManagementId"
+          AND COALESCE(lm."IsActive", true) = true
+          AND NOT COALESCE(lm."IsDeleted", false) = true
+        LEFT JOIN "License" l ON l."Id" = lm."LicenseId"
+        WHERE NOT COALESCE(u."IsDeleted", false) = true
+        GROUP BY u."Id", u."Name", u."EmailAddress", u."AccessProfileId", u."IsActive", u."Contact", ap."Name", e."FantasyName", l."Name"
         LIMIT $1 OFFSET $2
       `;
 
@@ -60,10 +80,10 @@ export async function POST(req: NextRequest) {
         name: row.Name || "",
         emailAddress: row.EmailAddress || "",
         accessProfileId: row.AccessProfileId,
-        enterpriseName: "", // Não carregamos ainda
-        licenseName: "", // Não carregamos ainda
-        contact: "", // Não carregamos ainda
-        accessProfileName: "", // Não carregamos ainda
+        enterpriseName: row.EnterpriseName || "",
+        licenseName: row.LicenseName || "",
+        contact: row.Contact || "",
+        accessProfileName: row.AccessProfileName || "",
         isActive: row.IsActive ?? true,
       }));
 
