@@ -86,7 +86,21 @@ export async function POST(req: NextRequest) {
     }
 
     const db = getPool();
-    const client = await db.connect();
+    let client;
+    
+    try {
+      client = await db.connect();
+    } catch (dbError: any) {
+      console.error("[LOGIN DB CONNECT ERROR]", dbError);
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Erro ao conectar ao banco de dados.",
+          error: String(dbError?.message || dbError),
+        },
+        { status: 500 }
+      );
+    }
 
     try {
       // Buscar usuário (mesma query do .NET)
@@ -159,22 +173,29 @@ export async function POST(req: NextRequest) {
       const refreshTokenValue = crypto.randomUUID();
       const expirationDate = new Date();
       expirationDate.setHours(expirationDate.getHours() + 3); // 3 horas
+      const now = new Date();
 
-      await client.query(
-        `INSERT INTO "UserRefreshToken"
-         ("Id", "UserId", "RefreshToken", "ExpirationDate", "CreatedOn", "CreatedBy", "IsActive", "IsDeleted")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [
-          refreshTokenId,
-          user.Id,
-          refreshTokenValue,
-          expirationDate,
-          new Date(),
-          user.Id,
-          true,
-          false,
-        ]
-      );
+      try {
+        await client.query(
+          `INSERT INTO "UserRefreshToken"
+           ("Id", "UserId", "RefreshToken", "ExpirationDate", "CreatedOn", "CreatedBy", "IsActive", "IsDeleted")
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            refreshTokenId,
+            user.Id,
+            refreshTokenValue,
+            expirationDate,
+            now,
+            user.Id,
+            true,
+            false,
+          ]
+        );
+      } catch (refreshError: any) {
+        // Log mas não falha o login se refresh token falhar
+        console.error("[LOGIN REFRESH TOKEN ERROR]", refreshError);
+        // Continua sem refresh token (login ainda funciona)
+      }
 
       const elapsed = Date.now() - startTime;
 
@@ -205,11 +226,23 @@ export async function POST(req: NextRequest) {
     }
   } catch (error: any) {
     console.error("[LOGIN ERROR]", error);
+    const errorMessage = error?.message || String(error);
+    const errorStack = error?.stack;
+    
+    // Log detalhado para debug
+    console.error("[LOGIN ERROR DETAILS]", {
+      message: errorMessage,
+      stack: errorStack,
+      name: error?.name,
+    });
+
     return NextResponse.json(
       {
         success: false,
         message: "Ocorreu um erro ao processar a autenticação.",
-        error: process.env.NODE_ENV === "development" ? String(error?.message) : undefined,
+        // Sempre retornar erro detalhado para debug (remover em produção se necessário)
+        error: errorMessage,
+        stack: process.env.NODE_ENV === "development" ? errorStack : undefined,
       },
       { status: 500 }
     );
