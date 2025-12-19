@@ -136,26 +136,30 @@ export async function POST(req: NextRequest) {
 
         console.log(`[CREATE USERS] User ${i + 1} prepared, executing INSERT...`);
         try {
-          await client.query(
+          const insertParams = [
+          userId,
+          user.accessProfileId || user.AccessProfileId,
+          user.name || user.Name || "",
+          user.emailAddress || user.EmailAddress || "",
+          user.contact || user.Contact || "",
+          passwordHash,
+          passwordSalt,
+          now,
+          systemUserId,
+          user.isActive !== undefined ? user.isActive : true,
+          false,
+          true, // MustChangePassword = true para novos usuários
+        ];
+        
+        console.log(`[CREATE USERS] User ${i + 1} params prepared, executing INSERT...`);
+        const insertResult = await client.query(
           `INSERT INTO "Users"
            ("Id", "AccessProfileId", "Name", "EmailAddress", "Contact", "PasswordHash", "PasswordSalt",
             "CreatedOn", "CreatedBy", "IsActive", "IsDeleted", "MustChangePassword")
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-          [
-            userId,
-            user.accessProfileId || user.AccessProfileId,
-            user.name || user.Name || "",
-            user.emailAddress || user.EmailAddress || "",
-            user.contact || user.Contact || "",
-            passwordHash,
-            passwordSalt,
-            now,
-            systemUserId,
-            user.isActive !== undefined ? user.isActive : true,
-            false,
-            true, // MustChangePassword = true para novos usuários
-          ]
+          insertParams
         );
+        console.log(`[CREATE USERS] User ${i + 1} INSERT completed`);
         console.log(`[CREATE USERS] User ${i + 1} inserted successfully`);
         } catch (userError: any) {
           console.error(`[CREATE USERS] Error inserting user ${i + 1}:`, userError);
