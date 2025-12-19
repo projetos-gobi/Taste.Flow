@@ -61,7 +61,7 @@ function generateToken(user: {
     sub: user.accessProfileId,
     userid: user.id,
     jti: crypto.randomUUID(),
-    iss: issuer,
+    // Não incluir 'iss' aqui - será adicionado via opções 'issuer'
     profileId: user.accessProfileId,
     enterpriseId: user.enterpriseId || "",
     name: user.name,
@@ -71,7 +71,7 @@ function generateToken(user: {
   };
 
   return jwt.sign(claims, secret, {
-    issuer,
+    issuer, // 'iss' será adicionado automaticamente aqui
     audience,
     expiresIn: `${expiryMinutes}m`,
   });
