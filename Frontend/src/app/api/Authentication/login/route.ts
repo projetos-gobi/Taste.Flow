@@ -246,6 +246,14 @@ export async function POST(req: NextRequest) {
 
       const elapsed = Date.now() - startTime;
 
+      console.log("[LOGIN] Returning success response", {
+        hasToken: !!token,
+        tokenLength: token?.length,
+        hasRefreshToken: !!refreshTokenValue,
+        userId: user.Id,
+        elapsed: `${elapsed}ms`,
+      });
+
       return NextResponse.json(
         {
           success: true,
