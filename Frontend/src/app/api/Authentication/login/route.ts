@@ -37,8 +37,13 @@ function getPool(): Pool {
 
 // SHA256 hash (mesma lógica do .NET: password.Trim() + salt)
 function toSha256Hash(password: string, salt: string): string {
+  // Garantir que password e salt são strings válidas
+  const trimmedPassword = (password || "").trim();
+  const saltStr = (salt || "").toString();
+  
+  // Criar hash SHA256
   const hash = crypto.createHash("sha256");
-  hash.update(password.trim() + salt);
+  hash.update(trimmedPassword + saltStr, "utf8");
   return hash.digest("hex");
 }
 
@@ -133,9 +138,31 @@ export async function POST(req: NextRequest) {
 
       // Validar senha (SHA256 + salt)
       const passwordHash = toSha256Hash(password, user.PasswordSalt);
+      
+      // Debug: log para verificar hash (apenas em desenvolvimento)
+      if (process.env.NODE_ENV === "development") {
+        console.log("[LOGIN DEBUG]", {
+          email,
+          passwordLength: password.length,
+          saltLength: user.PasswordSalt?.length,
+          computedHash: passwordHash.substring(0, 20) + "...",
+          storedHash: user.PasswordHash?.substring(0, 20) + "...",
+          hashesMatch: passwordHash === user.PasswordHash,
+        });
+      }
+      
       if (passwordHash !== user.PasswordHash) {
         return NextResponse.json(
-          { success: false, message: "Credenciais inválidas." },
+          { 
+            success: false, 
+            message: "Credenciais inválidas.",
+            // Debug apenas em desenvolvimento
+            debug: process.env.NODE_ENV === "development" ? {
+              hashLength: passwordHash.length,
+              storedHashLength: user.PasswordHash?.length,
+              saltLength: user.PasswordSalt?.length,
+            } : undefined,
+          },
           { status: 401 }
         );
       }
