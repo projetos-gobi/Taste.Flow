@@ -10,6 +10,7 @@ import { useChangePasswordModal } from "../hooks/useModal"
 import { IRecoverPasswordRequest } from "../types/auth"
 import { toast } from "sonner"
 import { recoverPassword } from "../services/auth"
+import Cookies from "js-cookie"
 
 interface ChangePasswordModalProps {
   open: boolean;
