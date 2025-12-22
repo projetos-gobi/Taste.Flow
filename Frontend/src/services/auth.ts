@@ -16,7 +16,9 @@ export const forgotPassword = async (data: IForgotPasswordRequest) => {
 export const recoverPassword = async (data: IRecoverPasswordRequest) => {
     const response = await api.post("/api/Authentication/recoverpassword", { ...data });
 
-    return response.data.data;
+    // O endpoint Next.js retorna { success: true, message: "..." } diretamente em response.data
+    // Não há um campo "data" aninhado como nos endpoints do backend .NET
+    return response.data;
 }
 
 export const refreshToken = async (data: IRefreshTokenRequest) => {
