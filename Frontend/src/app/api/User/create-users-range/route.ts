@@ -73,26 +73,26 @@ function getEmailTransporter() {
   let tlsConfig: any;
 
   if (useGmail) {
-    // Configuração Gmail
-    smtpServer = process.env.SMTP_SERVER || "smtp.gmail.com";
-    smtpPort = parseInt(process.env.SMTP_PORT || "587", 10); // Gmail usa 587 (TLS) ou 465 (SSL)
-    smtpUsername = process.env.SMTP_USERNAME || process.env.GMAIL_USER || "";
-    smtpPassword = process.env.SMTP_PASSWORD || process.env.GMAIL_APP_PASSWORD || "";
-    smtpFromName = process.env.SMTP_FROM_NAME || "TasteFlow";
-    smtpFromEmail = process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || smtpUsername;
+    // Configuração Gmail (remover espaços e quebras de linha das variáveis de ambiente)
+    smtpServer = (process.env.SMTP_SERVER || "smtp.gmail.com").trim();
+    smtpPort = parseInt((process.env.SMTP_PORT || "587").trim(), 10); // Gmail usa 587 (TLS) ou 465 (SSL)
+    smtpUsername = (process.env.SMTP_USERNAME || process.env.GMAIL_USER || "").trim();
+    smtpPassword = (process.env.SMTP_PASSWORD || process.env.GMAIL_APP_PASSWORD || "").trim().replace(/\s+/g, ""); // Remove espaços da senha de app
+    smtpFromName = (process.env.SMTP_FROM_NAME || "TasteFlow").trim();
+    smtpFromEmail = (process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || smtpUsername).trim();
     
     secure = smtpPort === 465; // true para 465 (SSL), false para 587 (TLS)
     tlsConfig = {
       rejectUnauthorized: true, // Gmail tem certificado válido
     };
   } else {
-    // Configuração SMTP personalizado
-    smtpServer = process.env.SMTP_SERVER || "p003.use1.my-hosting-panel.com";
-    smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
-    smtpUsername = process.env.SMTP_USERNAME || "tasteflow@modest-bhabha.65-181-111-22.plesk.page";
-    smtpPassword = process.env.SMTP_PASSWORD || "7^Y2ze7g1";
-    smtpFromName = process.env.SMTP_FROM_NAME || "TasteFlow";
-    smtpFromEmail = process.env.SMTP_FROM_EMAIL || "tasteflow@modest-bhabha.65-181-111-22.plesk.page";
+    // Configuração SMTP personalizado (remover espaços e quebras de linha)
+    smtpServer = (process.env.SMTP_SERVER || "p003.use1.my-hosting-panel.com").trim();
+    smtpPort = parseInt((process.env.SMTP_PORT || "465").trim(), 10);
+    smtpUsername = (process.env.SMTP_USERNAME || "tasteflow@modest-bhabha.65-181-111-22.plesk.page").trim();
+    smtpPassword = (process.env.SMTP_PASSWORD || "7^Y2ze7g1").trim();
+    smtpFromName = (process.env.SMTP_FROM_NAME || "TasteFlow").trim();
+    smtpFromEmail = (process.env.SMTP_FROM_EMAIL || "tasteflow@modest-bhabha.65-181-111-22.plesk.page").trim();
     
     secure = smtpPort === 465;
     tlsConfig = {
