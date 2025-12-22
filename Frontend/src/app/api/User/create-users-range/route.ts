@@ -138,11 +138,16 @@ async function sendNewUserEmail(
   client: any
 ): Promise<boolean> {
   try {
+    console.log(`[SEND EMAIL] Starting email send to ${email}`);
+    
     const transporter = getEmailTransporter();
     const smtpFromName = process.env.SMTP_FROM_NAME || "TasteFlow";
     const smtpFromEmail = process.env.SMTP_FROM_EMAIL || "tasteflow@modest-bhabha.65-181-111-22.plesk.page";
 
+    console.log(`[SEND EMAIL] SMTP config: server=${process.env.SMTP_SERVER || "p003.use1.my-hosting-panel.com"}, port=${process.env.SMTP_PORT || "465"}, from=${smtpFromEmail}`);
+
     const template = await getEmailTemplate(client, "newUser");
+    console.log(`[SEND EMAIL] Template loaded: subject="${template.subject.substring(0, 50)}..."`);
 
     const subject = template.subject.replace(/\[Name\]/g, name);
     const body = template.body
@@ -150,17 +155,25 @@ async function sendNewUserEmail(
       .replace(/\[Email\]/g, email)
       .replace(/\[Password\]/g, password);
 
-    await transporter.sendMail({
+    console.log(`[SEND EMAIL] Sending mail to ${email}...`);
+    const result = await transporter.sendMail({
       from: `"${smtpFromName}" <${smtpFromEmail}>`,
       to: email,
       subject: subject,
       html: body,
     });
 
-    console.log(`[CREATE USERS] Email sent successfully to ${email}`);
+    console.log(`[SEND EMAIL] ✅ Email sent successfully to ${email}, messageId: ${result.messageId}`);
     return true;
-  } catch (error) {
-    console.error(`[SEND NEW USER EMAIL ERROR] Failed to send email to ${email}:`, error);
+  } catch (error: any) {
+    console.error(`[SEND EMAIL] ❌ Failed to send email to ${email}:`, error);
+    console.error(`[SEND EMAIL] Error details:`, {
+      message: error?.message,
+      code: error?.code,
+      command: error?.command,
+      response: error?.response,
+      responseCode: error?.responseCode,
+    });
     return false;
   }
 }
@@ -287,9 +300,20 @@ export async function POST(req: NextRequest) {
         const userEmail = user.emailAddress || user.EmailAddress || "";
         const userName = user.name || user.Name || "";
         if (userEmail) {
-          sendNewUserEmail(userEmail, userName, randomPassword, client).catch((err) => {
-            console.error(`[CREATE USERS] Failed to send email to ${userEmail}:`, err);
-          });
+          console.log(`[CREATE USERS] Attempting to send email to ${userEmail} for user ${userName}`);
+          sendNewUserEmail(userEmail, userName, randomPassword, client)
+            .then((success) => {
+              if (success) {
+                console.log(`[CREATE USERS] ✅ Email sent successfully to ${userEmail}`);
+              } else {
+                console.error(`[CREATE USERS] ❌ Failed to send email to ${userEmail} (returned false)`);
+              }
+            })
+            .catch((err) => {
+              console.error(`[CREATE USERS] ❌ Error sending email to ${userEmail}:`, err);
+            });
+        } else {
+          console.warn(`[CREATE USERS] ⚠️ No email address provided for user ${userName}, skipping email send`);
         }
       }
 
