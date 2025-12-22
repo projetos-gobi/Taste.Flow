@@ -92,11 +92,16 @@ const recentActivity = [
   { type: "user", action: "Usuário removido", name: "Maria Santos", time: "2h atrás", status: "warning" },
 ]
 
-const topProducts = [
-  { name: "Produto A", vendas: 245, receita: "R$ 12.450,00", crescimento: "+15%" },
-  { name: "Produto B", vendas: 189, receita: "R$ 9.850,00", crescimento: "+8%" },
-  { name: "Produto C", vendas: 156, receita: "R$ 7.200,00", crescimento: "+22%" },
-  { name: "Produto D", vendas: 134, receita: "R$ 6.100,00", crescimento: "+5%" },
+// Dados de distribuição geográfica serão carregados dinamicamente
+const geographicDistribution = [
+  { estado: "SP", cidade: "São Paulo", empresas: 45, licencas: 68, porcentagem: 36.5 },
+  { estado: "RJ", cidade: "Rio de Janeiro", empresas: 28, licencas: 42, porcentagem: 22.7 },
+  { estado: "MG", cidade: "Belo Horizonte", empresas: 18, licencas: 25, porcentagem: 14.5 },
+  { estado: "RS", cidade: "Porto Alegre", empresas: 12, licencas: 18, porcentagem: 9.7 },
+  { estado: "PR", cidade: "Curitiba", empresas: 8, licencas: 12, porcentagem: 6.5 },
+  { estado: "SC", cidade: "Florianópolis", empresas: 6, licencas: 9, porcentagem: 4.8 },
+  { estado: "BA", cidade: "Salvador", empresas: 5, licencas: 7, porcentagem: 4.0 },
+  { estado: "Outros", cidade: "Outras cidades", empresas: 2, licencas: 3, porcentagem: 1.3 },
 ]
 
 export default function AdminDashboardPreview() {
@@ -342,32 +347,54 @@ export default function AdminDashboardPreview() {
             </CardContent>
           </Card>
 
-          {/* Top Products */}
+          {/* Geographic Distribution */}
           <Card className="border-0 shadow-lg">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold text-gray-900 font-heading">
-                Produtos em Destaque
+                Distribuição Geográfica
               </CardTitle>
+              <Button variant="ghost" size="sm" className="text-xs text-[#322ca7]">
+                Ver mapa completo
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {topProducts.map((product, index) => (
+              <div className="space-y-3">
+                {geographicDistribution.map((region, index) => (
                   <div 
                     key={index}
-                    className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-white border border-gray-100 hover:shadow-md transition-shadow"
+                    className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-white border border-gray-100 hover:shadow-md transition-all hover:border-[#322ca7]/20"
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="font-semibold text-gray-900 font-body">{product.name}</p>
-                        <p className="text-sm text-gray-600 font-body">{product.vendas} vendas</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-gray-900 font-body">{region.cidade}</p>
+                          <span className="text-xs text-gray-500 font-body">({region.estado})</span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-600 font-body">
+                          <span>{region.empresas} empresas</span>
+                          <span>•</span>
+                          <span>{region.licencas} licenças ativas</span>
+                        </div>
                       </div>
-                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                        {product.crescimento}
-                      </span>
+                      <div className="text-right">
+                        <span className="text-lg font-bold text-[#322ca7] font-heading">{region.porcentagem}%</span>
+                        <p className="text-xs text-gray-500 font-body">do total</p>
+                      </div>
                     </div>
-                    <p className="text-lg font-bold text-gray-900 font-heading">{product.receita}</p>
+                    {/* Barra de progresso visual */}
+                    <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-[#322ca7] to-[#6366f1] h-2 rounded-full transition-all"
+                        style={{ width: `${region.porcentagem}%` }}
+                      />
+                    </div>
                   </div>
                 ))}
+              </div>
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-xs text-blue-800 font-body">
+                  💡 <strong>Insight:</strong> Concentração de {geographicDistribution[0].porcentagem}% em {geographicDistribution[0].cidade} indica oportunidade de expansão em outras regiões.
+                </p>
               </div>
             </CardContent>
           </Card>
