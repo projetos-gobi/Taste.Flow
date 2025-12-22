@@ -55,27 +55,45 @@ export function AdminSidebar() {
       className={`sidebar-gradient h-screen flex-col transition-all duration-300 ${isCollapsed ? "w-16" : "w-64"} hidden md:flex`}
     >
       {/* Header with Logo */}
-      <div className="p-6 border-b border-white/20">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-8 h-8 flex-shrink-0">
-              <img src="/images/tasteflow-icon.svg" alt="TasteFlow" className="w-full h-auto" />
-            </div>
-            {!isCollapsed && <span className="font-bebas text-white text-xl tracking-wider">TASTEFLOW</span>}
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-white hover:bg-white/10 p-2 h-8 w-8 flex-shrink-0"
-            title={isCollapsed ? "Expandir menu" : "Colapsar menu"}
-          >
-            {isCollapsed ? (
-              <Menu className="h-5 w-5" />
-            ) : (
-              <X className="h-5 w-5" />
-            )}
-          </Button>
+      <div className={`border-b border-white/20 ${isCollapsed ? "p-4" : "p-6"}`}>
+        <div className="flex items-center justify-center gap-2 relative w-full">
+          {isCollapsed ? (
+            <>
+              {/* Quando colapsado: logo centralizado */}
+              <div className="w-8 h-8 flex-shrink-0">
+                <img src="/images/tasteflow-icon.svg" alt="TasteFlow" className="w-full h-auto" />
+              </div>
+              {/* Botão hambúrguer posicionado absolutamente à direita */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="absolute right-0 text-white hover:bg-white/10 p-2 h-8 w-8 flex-shrink-0"
+                title="Expandir menu"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </>
+          ) : (
+            <>
+              {/* Quando expandido: logo e texto à esquerda, botão à direita */}
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-8 h-8 flex-shrink-0">
+                  <img src="/images/tasteflow-icon.svg" alt="TasteFlow" className="w-full h-auto" />
+                </div>
+                <span className="font-bebas text-white text-xl tracking-wider">TASTEFLOW</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="text-white hover:bg-white/10 p-2 h-8 w-8 flex-shrink-0"
+                title="Colapsar menu"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
