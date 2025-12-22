@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Pool } from "pg";
 import crypto from "crypto";
+import nodemailer from "nodemailer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +56,113 @@ function generateLicenseCode(length: number = 16): string {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return result;
+}
+
+// Configurar transporter de e-mail
+function getEmailTransporter() {
+  const smtpServer = process.env.SMTP_SERVER || "p003.use1.my-hosting-panel.com";
+  const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
+  const smtpUsername = process.env.SMTP_USERNAME || "tasteflow@modest-bhabha.65-181-111-22.plesk.page";
+  const smtpPassword = process.env.SMTP_PASSWORD || "7^Y2ze7g1";
+  const smtpFromName = process.env.SMTP_FROM_NAME || "TasteFlow";
+  const smtpFromEmail = process.env.SMTP_FROM_EMAIL || "tasteflow@modest-bhabha.65-181-111-22.plesk.page";
+
+  return nodemailer.createTransport({
+    host: smtpServer,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: {
+      user: smtpUsername,
+      pass: smtpPassword,
+    },
+  });
+}
+
+// Buscar template de e-mail do banco ou usar template padrão
+async function getEmailTemplate(client: any, templateType: "newUser" | "forgotPassword"): Promise<{ subject: string; body: string }> {
+  try {
+    const templateId = templateType === "newUser" 
+      ? "5042089B-A9BA-4FB9-B5B2-AFEEEB4B4F4D"
+      : "AC8216BF-BEEA-44C9-B4C5-D15DF6E145F5";
+
+    const result = await client.query(
+      `SELECT "Subject", "Body" FROM "EmailTemplate" WHERE "Id" = $1 AND COALESCE("IsActive", true) = true AND NOT COALESCE("IsDeleted", false) = true`,
+      [templateId]
+    );
+
+    if (result.rows.length > 0) {
+      return {
+        subject: result.rows[0].Subject || "",
+        body: result.rows[0].Body || "",
+      };
+    }
+  } catch (error) {
+    console.error("[GET EMAIL TEMPLATE ERROR]", error);
+  }
+
+  // Template padrão
+  if (templateType === "newUser") {
+    return {
+      subject: "Bem-vindo ao TasteFlow - Sua senha temporária",
+      body: `
+        <html>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2>Bem-vindo ao TasteFlow!</h2>
+            <p>Olá [Name],</p>
+            <p>Sua conta foi criada com sucesso no sistema TasteFlow.</p>
+            <p><strong>Suas credenciais de acesso:</strong></p>
+            <ul>
+              <li><strong>E-mail:</strong> [Email]</li>
+              <li><strong>Senha temporária:</strong> [Password]</li>
+            </ul>
+            <p><strong>Importante:</strong> Por segurança, você precisará alterar sua senha no primeiro acesso.</p>
+            <p>Se você não solicitou esta conta, por favor, ignore este e-mail.</p>
+            <p>Atenciosamente,<br>Equipe TasteFlow</p>
+          </body>
+        </html>
+      `,
+    };
+  }
+
+  return {
+    subject: "Redefinição de Senha - TasteFlow",
+    body: "<p>Sua senha foi redefinida.</p>",
+  };
+}
+
+// Enviar e-mail para novo usuário
+async function sendNewUserEmail(
+  email: string,
+  name: string,
+  password: string,
+  client: any
+): Promise<boolean> {
+  try {
+    const transporter = getEmailTransporter();
+    const smtpFromName = process.env.SMTP_FROM_NAME || "TasteFlow";
+    const smtpFromEmail = process.env.SMTP_FROM_EMAIL || "tasteflow@modest-bhabha.65-181-111-22.plesk.page";
+
+    const template = await getEmailTemplate(client, "newUser");
+
+    const subject = template.subject.replace(/\[Name\]/g, name);
+    const body = template.body
+      .replace(/\[Name\]/g, name)
+      .replace(/\[Email\]/g, email)
+      .replace(/\[Password\]/g, password);
+
+    await transporter.sendMail({
+      from: `"${smtpFromName}" <${smtpFromEmail}>`,
+      to: email,
+      subject: subject,
+      html: body,
+    });
+
+    console.log(`[CREATE USERS] Email sent successfully to ${email}`);
+    return true;
+  } catch (error) {
+    console.error(`[SEND NEW USER EMAIL ERROR] Failed to send email to ${email}:`, error);
+    return false;
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -174,6 +282,15 @@ export async function POST(req: NextRequest) {
         }
 
         createdUserIds.push(userId);
+
+        // Enviar e-mail com senha temporária (fire-and-forget para não bloquear a criação)
+        const userEmail = user.emailAddress || user.EmailAddress || "";
+        const userName = user.name || user.Name || "";
+        if (userEmail) {
+          sendNewUserEmail(userEmail, userName, randomPassword, client).catch((err) => {
+            console.error(`[CREATE USERS] Failed to send email to ${userEmail}:`, err);
+          });
+        }
       }
 
       console.log(`[CREATE USERS] Users created: ${createdUserIds.length}`);
