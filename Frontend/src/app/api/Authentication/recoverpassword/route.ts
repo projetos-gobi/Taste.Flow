@@ -66,9 +66,12 @@ export async function POST(req: NextRequest) {
 
     console.log("[RECOVER PASSWORD] Request received:", {
       hasCode: !!code,
-      codeLength: code.length,
+      codeValue: code,
+      codeLength: code ? code.length : 0,
       hasOldPassword: !!oldPassword,
+      oldPasswordLength: oldPassword ? oldPassword.length : 0,
       hasNewPassword: !!newPassword,
+      newPasswordLength: newPassword ? newPassword.length : 0,
     });
 
     // Se code estiver vazio, permitir alteração apenas com senha antiga (para usuários novos sem código)
