@@ -361,22 +361,29 @@ export async function POST(req: NextRequest) {
 
         createdUserIds.push(userId);
 
-        // Enviar e-mail com senha temporária (fire-and-forget para não bloquear a criação)
+        // Enviar e-mail com senha temporária
         const userEmail = user.emailAddress || user.EmailAddress || "";
         const userName = user.name || user.Name || "";
         if (userEmail) {
           console.log(`[CREATE USERS] Attempting to send email to ${userEmail} for user ${userName}`);
-          sendNewUserEmail(userEmail, userName, randomPassword, client)
-            .then((success) => {
-              if (success) {
-                console.log(`[CREATE USERS] ✅ Email sent successfully to ${userEmail}`);
-              } else {
-                console.error(`[CREATE USERS] ❌ Failed to send email to ${userEmail} (returned false)`);
-              }
-            })
-            .catch((err) => {
-              console.error(`[CREATE USERS] ❌ Error sending email to ${userEmail}:`, err);
+          try {
+            // Aguardar o envio do e-mail para garantir que seja enviado antes de finalizar a transação
+            const emailSent = await sendNewUserEmail(userEmail, userName, randomPassword, client);
+            if (emailSent) {
+              console.log(`[CREATE USERS] ✅ Email sent successfully to ${userEmail}`);
+            } else {
+              console.error(`[CREATE USERS] ❌ Failed to send email to ${userEmail} (returned false)`);
+              // Não bloquear a criação do usuário se o e-mail falhar, mas logar o erro
+            }
+          } catch (emailError: any) {
+            console.error(`[CREATE USERS] ❌ Error sending email to ${userEmail}:`, emailError);
+            console.error(`[CREATE USERS] Email error details:`, {
+              message: emailError?.message,
+              code: emailError?.code,
+              stack: emailError?.stack,
             });
+            // Não bloquear a criação do usuário se o e-mail falhar, mas logar o erro
+          }
         } else {
           console.warn(`[CREATE USERS] ⚠️ No email address provided for user ${userName}, skipping email send`);
         }
