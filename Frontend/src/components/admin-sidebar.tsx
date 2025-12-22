@@ -56,19 +56,18 @@ export function AdminSidebar() {
     >
       {/* Header with Logo */}
       <div className={`border-b border-white/20 ${isCollapsed ? "p-4" : "p-6"}`}>
-        <div className="flex items-center justify-center gap-2 relative w-full">
+        <div className="flex items-center justify-between gap-2 w-full">
           {isCollapsed ? (
             <>
-              {/* Quando colapsado: logo centralizado */}
+              {/* Quando colapsado: logo à esquerda, botão à direita */}
               <div className="w-8 h-8 flex-shrink-0">
                 <img src="/images/tasteflow-icon.svg" alt="TasteFlow" className="w-full h-auto" />
               </div>
-              {/* Botão hambúrguer posicionado absolutamente à direita */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="absolute right-0 text-white hover:bg-white/10 p-2 h-8 w-8 flex-shrink-0"
+                className="text-white hover:bg-white/10 p-2 h-8 w-8 flex-shrink-0"
                 title="Expandir menu"
               >
                 <Menu className="h-5 w-5" />
