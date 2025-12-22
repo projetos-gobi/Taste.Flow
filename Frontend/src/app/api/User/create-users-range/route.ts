@@ -60,28 +60,59 @@ function generateLicenseCode(length: number = 16): string {
 
 // Configurar transporter de e-mail
 function getEmailTransporter() {
-  const smtpServer = process.env.SMTP_SERVER || "p003.use1.my-hosting-panel.com";
-  const smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
-  const smtpUsername = process.env.SMTP_USERNAME || "tasteflow@modest-bhabha.65-181-111-22.plesk.page";
-  const smtpPassword = process.env.SMTP_PASSWORD || "7^Y2ze7g1";
-  const smtpFromName = process.env.SMTP_FROM_NAME || "TasteFlow";
-  const smtpFromEmail = process.env.SMTP_FROM_EMAIL || "tasteflow@modest-bhabha.65-181-111-22.plesk.page";
+  // Se SMTP_SERVER não estiver definido, usar Gmail por padrão
+  const useGmail = !process.env.SMTP_SERVER || process.env.SMTP_SERVER.toLowerCase().includes("gmail");
+  
+  let smtpServer: string;
+  let smtpPort: number;
+  let smtpUsername: string;
+  let smtpPassword: string;
+  let smtpFromName: string;
+  let smtpFromEmail: string;
+  let secure: boolean;
+  let tlsConfig: any;
 
-  console.log(`[SMTP CONFIG] Server: ${smtpServer}, Port: ${smtpPort}, Username: ${smtpUsername}, From: ${smtpFromEmail}`);
+  if (useGmail) {
+    // Configuração Gmail
+    smtpServer = process.env.SMTP_SERVER || "smtp.gmail.com";
+    smtpPort = parseInt(process.env.SMTP_PORT || "587", 10); // Gmail usa 587 (TLS) ou 465 (SSL)
+    smtpUsername = process.env.SMTP_USERNAME || process.env.GMAIL_USER || "";
+    smtpPassword = process.env.SMTP_PASSWORD || process.env.GMAIL_APP_PASSWORD || "";
+    smtpFromName = process.env.SMTP_FROM_NAME || "TasteFlow";
+    smtpFromEmail = process.env.SMTP_FROM_EMAIL || process.env.GMAIL_USER || smtpUsername;
+    
+    secure = smtpPort === 465; // true para 465 (SSL), false para 587 (TLS)
+    tlsConfig = {
+      rejectUnauthorized: true, // Gmail tem certificado válido
+    };
+  } else {
+    // Configuração SMTP personalizado
+    smtpServer = process.env.SMTP_SERVER || "p003.use1.my-hosting-panel.com";
+    smtpPort = parseInt(process.env.SMTP_PORT || "465", 10);
+    smtpUsername = process.env.SMTP_USERNAME || "tasteflow@modest-bhabha.65-181-111-22.plesk.page";
+    smtpPassword = process.env.SMTP_PASSWORD || "7^Y2ze7g1";
+    smtpFromName = process.env.SMTP_FROM_NAME || "TasteFlow";
+    smtpFromEmail = process.env.SMTP_FROM_EMAIL || "tasteflow@modest-bhabha.65-181-111-22.plesk.page";
+    
+    secure = smtpPort === 465;
+    tlsConfig = {
+      rejectUnauthorized: false, // Aceitar certificados auto-assinados
+    };
+  }
+
+  console.log(`[SMTP CONFIG] Provider: ${useGmail ? "Gmail" : "Custom"}, Server: ${smtpServer}, Port: ${smtpPort}, Username: ${smtpUsername}, From: ${smtpFromEmail}`);
 
   return nodemailer.createTransport({
     host: smtpServer,
     port: smtpPort,
-    secure: smtpPort === 465, // true para SSL na porta 465
+    secure: secure,
     auth: {
       user: smtpUsername,
       pass: smtpPassword,
     },
-    tls: {
-      rejectUnauthorized: false, // Aceitar certificados auto-assinados
-    },
-    debug: true, // Habilitar debug
-    logger: true, // Logar no console
+    tls: tlsConfig,
+    debug: true,
+    logger: true,
   });
 }
 
