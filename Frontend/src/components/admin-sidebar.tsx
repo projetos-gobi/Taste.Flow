@@ -67,7 +67,7 @@ export function AdminSidebar() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="text-white hover:bg-white/10 p-2 h-8 w-8 flex-shrink-0"
+                className="text-white bg-white/10 hover:bg-white/20 border border-white/20 p-2 h-8 w-8 flex-shrink-0"
                 title="Expandir menu"
               >
                 <Menu className="h-5 w-5" />
@@ -86,7 +86,7 @@ export function AdminSidebar() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="text-white hover:bg-white/10 p-2 h-8 w-8 flex-shrink-0"
+                className="text-white bg-white/10 hover:bg-white/20 border border-white/20 p-2 h-8 w-8 flex-shrink-0"
                 title="Colapsar menu"
               >
                 <X className="h-5 w-5" />
