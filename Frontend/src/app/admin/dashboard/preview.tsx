@@ -1,0 +1,408 @@
+"use client"
+
+import { Button } from "@/src/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card"
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Users, 
+  Building2, 
+  DollarSign, 
+  Package,
+  Activity,
+  ArrowUpRight,
+  ArrowDownRight,
+  Calendar,
+  Download,
+  Filter,
+  MoreVertical
+} from "lucide-react"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Tooltip, Legend } from "recharts"
+import Link from "next/link"
+
+// Dados de exemplo
+const metrics = [
+  {
+    title: "Faturamento Total",
+    value: "R$ 585.363,64",
+    change: "+3.5%",
+    changeType: "positive" as const,
+    icon: DollarSign,
+    color: "from-emerald-500 to-teal-600",
+    bgColor: "bg-emerald-500/10",
+    iconColor: "text-emerald-500",
+  },
+  {
+    title: "Total de Clientes",
+    value: "368",
+    change: "+5.2%",
+    changeType: "positive" as const,
+    icon: Users,
+    color: "from-blue-500 to-indigo-600",
+    bgColor: "bg-blue-500/10",
+    iconColor: "text-blue-500",
+  },
+  {
+    title: "Lucro Líquido",
+    value: "R$ 51.420,16",
+    change: "+2.1%",
+    changeType: "positive" as const,
+    icon: TrendingUp,
+    color: "from-purple-500 to-pink-600",
+    bgColor: "bg-purple-500/10",
+    iconColor: "text-purple-500",
+  },
+  {
+    title: "Produtos Ativos",
+    value: "1.247",
+    change: "+12.3%",
+    changeType: "positive" as const,
+    icon: Package,
+    color: "from-orange-500 to-red-600",
+    bgColor: "bg-orange-500/10",
+    iconColor: "text-orange-500",
+  },
+]
+
+const monthlyRevenue = [
+  { month: "Jan", receita: 45000, despesas: 32000, lucro: 13000 },
+  { month: "Fev", receita: 52000, despesas: 35000, lucro: 17000 },
+  { month: "Mar", receita: 48000, despesas: 33000, lucro: 15000 },
+  { month: "Abr", receita: 61000, despesas: 38000, lucro: 23000 },
+  { month: "Mai", receita: 55000, despesas: 36000, lucro: 19000 },
+  { month: "Jun", receita: 67000, despesas: 40000, lucro: 27000 },
+  { month: "Jul", receita: 58000, despesas: 37000, lucro: 21000 },
+  { month: "Ago", receita: 72000, despesas: 42000, lucro: 30000 },
+  { month: "Set", receita: 65000, despesas: 39000, lucro: 26000 },
+  { month: "Out", receita: 78000, despesas: 45000, lucro: 33000 },
+  { month: "Nov", receita: 71000, despesas: 43000, lucro: 28000 },
+  { month: "Dez", receita: 85000, despesas: 48000, lucro: 37000 },
+]
+
+const planDistribution = [
+  { name: "Premium", value: 52, color: "#8b5cf6", icon: "👑" },
+  { name: "Completo", value: 28, color: "#3b82f6", icon: "⭐" },
+  { name: "Básico", value: 20, color: "#10b981", icon: "📦" },
+]
+
+const recentActivity = [
+  { type: "user", action: "Novo usuário cadastrado", name: "João Silva", time: "2 min atrás", status: "success" },
+  { type: "enterprise", action: "Empresa criada", name: "Tech Solutions LTDA", time: "15 min atrás", status: "success" },
+  { type: "product", action: "Produto atualizado", name: "Produto Premium X", time: "1h atrás", status: "info" },
+  { type: "user", action: "Usuário removido", name: "Maria Santos", time: "2h atrás", status: "warning" },
+]
+
+const topProducts = [
+  { name: "Produto A", vendas: 245, receita: "R$ 12.450,00", crescimento: "+15%" },
+  { name: "Produto B", vendas: 189, receita: "R$ 9.850,00", crescimento: "+8%" },
+  { name: "Produto C", vendas: 156, receita: "R$ 7.200,00", crescimento: "+22%" },
+  { name: "Produto D", vendas: 134, receita: "R$ 6.100,00", crescimento: "+5%" },
+]
+
+export default function AdminDashboardPreview() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="p-6 lg:p-8 space-y-6">
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 font-heading mb-2">
+              Dashboard Administrativo
+            </h1>
+            <p className="text-gray-600 font-body">
+              Visão geral do desempenho e métricas do sistema
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Button variant="outline" className="gap-2">
+              <Filter className="h-4 w-4" />
+              Filtros
+            </Button>
+            <Button variant="outline" className="gap-2">
+              <Calendar className="h-4 w-4" />
+              Últimos 30 dias
+            </Button>
+            <Button className="bg-[#322ca7] hover:bg-[#322ca7]/90 gap-2">
+              <Download className="h-4 w-4" />
+              Exportar
+            </Button>
+          </div>
+        </div>
+
+        {/* Metrics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {metrics.map((metric, index) => {
+            const Icon = metric.icon
+            return (
+              <Card 
+                key={index} 
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group"
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`p-3 rounded-xl ${metric.bgColor} group-hover:scale-110 transition-transform`}>
+                      <Icon className={`h-6 w-6 ${metric.iconColor}`} />
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreVertical className="h-4 w-4 text-gray-400" />
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-gray-600 font-body">{metric.title}</p>
+                    <p className="text-2xl font-bold text-gray-900 font-heading">{metric.value}</p>
+                    <div className="flex items-center gap-1 pt-2">
+                      {metric.changeType === "positive" ? (
+                        <div className="flex items-center gap-1 text-emerald-600 text-sm font-medium">
+                          <ArrowUpRight className="h-4 w-4" />
+                          <span>{metric.change}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-red-600 text-sm font-medium">
+                          <ArrowDownRight className="h-4 w-4" />
+                          <span>{metric.change}</span>
+                        </div>
+                      )}
+                      <span className="text-sm text-gray-500 font-body">vs. mês anterior</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Revenue Chart - Takes 2 columns */}
+          <Card className="lg:col-span-2 border-0 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
+              <CardTitle className="text-lg font-semibold text-gray-900 font-heading">
+                Receita e Despesas
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="text-xs">
+                  Mensal
+                </Button>
+                <Button variant="ghost" size="sm" className="text-xs">
+                  Anual
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyRevenue}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      dataKey="month" 
+                      stroke="#6b7280"
+                      fontSize={12}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      stroke="#6b7280"
+                      fontSize={12}
+                      tickLine={false}
+                      tickFormatter={(value) => `R$ ${value/1000}k`}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                      formatter={(value: any) => `R$ ${value.toLocaleString('pt-BR')}`}
+                    />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="receita" 
+                      stroke="#3b82f6" 
+                      strokeWidth={3}
+                      dot={{ fill: '#3b82f6', r: 4 }}
+                      name="Receita"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="despesas" 
+                      stroke="#ef4444" 
+                      strokeWidth={3}
+                      dot={{ fill: '#ef4444', r: 4 }}
+                      name="Despesas"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="lucro" 
+                      stroke="#10b981" 
+                      strokeWidth={3}
+                      dot={{ fill: '#10b981', r: 4 }}
+                      name="Lucro"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Plan Distribution */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-gray-900 font-heading">
+                Distribuição de Planos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-center mb-6">
+                <div className="relative">
+                  <PieChart width={200} height={200}>
+                    <Pie
+                      data={planDistribution}
+                      cx={100}
+                      cy={100}
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {planDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-bold text-gray-900 font-heading">368</span>
+                    <span className="text-xs text-gray-500 font-body">Total</span>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {planDistribution.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{item.icon}</span>
+                      <div>
+                        <p className="font-medium text-gray-900 font-body">{item.name}</p>
+                        <p className="text-xs text-gray-500 font-body">{item.value}% dos usuários</p>
+                      </div>
+                    </div>
+                    <div 
+                      className="w-4 h-4 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bottom Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Activity */}
+          <Card className="lg:col-span-2 border-0 shadow-lg">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-gray-900 font-heading">
+                Atividades Recentes
+              </CardTitle>
+              <Button variant="ghost" size="sm" className="text-xs text-[#322ca7]">
+                Ver todas
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentActivity.map((activity, index) => (
+                  <div 
+                    key={index}
+                    className="flex items-start gap-4 p-4 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
+                  >
+                    <div className={`p-2 rounded-lg ${
+                      activity.status === "success" ? "bg-emerald-100" :
+                      activity.status === "warning" ? "bg-amber-100" :
+                      "bg-blue-100"
+                    }`}>
+                      {activity.type === "user" && <Users className={`h-5 w-5 ${
+                        activity.status === "success" ? "text-emerald-600" :
+                        activity.status === "warning" ? "text-amber-600" :
+                        "text-blue-600"
+                      }`} />}
+                      {activity.type === "enterprise" && <Building2 className="h-5 w-5 text-emerald-600" />}
+                      {activity.type === "product" && <Package className="h-5 w-5 text-blue-600" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 font-body">{activity.action}</p>
+                      <p className="text-sm text-gray-600 font-body">{activity.name}</p>
+                      <p className="text-xs text-gray-400 font-body mt-1">{activity.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top Products */}
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-gray-900 font-heading">
+                Produtos em Destaque
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {topProducts.map((product, index) => (
+                  <div 
+                    key={index}
+                    className="p-4 rounded-lg bg-gradient-to-r from-gray-50 to-white border border-gray-100 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="font-semibold text-gray-900 font-body">{product.name}</p>
+                        <p className="text-sm text-gray-600 font-body">{product.vendas} vendas</p>
+                      </div>
+                      <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                        {product.crescimento}
+                      </span>
+                    </div>
+                    <p className="text-lg font-bold text-gray-900 font-heading">{product.receita}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mt-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 font-heading">Acesso Rápido</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { title: "Usuários", icon: Users, href: "/admin/usuarios", color: "from-blue-500 to-indigo-600", count: "368" },
+              { title: "Empresas", icon: Building2, href: "/admin/empresas", color: "from-purple-500 to-pink-600", count: "124" },
+              { title: "Produtos", icon: Package, href: "/cadastros/produtos", color: "from-emerald-500 to-teal-600", count: "1.247" },
+              { title: "Relatórios", icon: Activity, href: "#", color: "from-orange-500 to-red-600", count: "12" },
+            ].map((area, index) => {
+              const Icon = area.icon
+              return (
+                <Link key={index} href={area.href}>
+                  <Card className={`bg-gradient-to-br ${area.color} border-0 text-white hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl cursor-pointer group`}>
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <Icon className="h-8 w-8 opacity-90 group-hover:scale-110 transition-transform" />
+                        <span className="text-2xl font-bold font-heading">{area.count}</span>
+                      </div>
+                      <h3 className="text-lg font-semibold font-heading">{area.title}</h3>
+                      <p className="text-sm opacity-80 font-body mt-1">Gerenciar {area.title.toLowerCase()}</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+

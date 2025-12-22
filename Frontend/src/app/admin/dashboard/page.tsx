@@ -1,19 +1,54 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/src/components/ui/button"
 import { AdminDashboardMetrics } from "@/src/components/admin-dashboard-metrics"
 import { AdminDashboardCharts } from "@/src/components/admin-dashboard-charts"
 import { AdminDashboardAreas } from "@/src/components/admin-dashboard-areas"
-import { TasteFlowLogo } from "@/src/components/tasteflow-logo"
+import AdminDashboardPreview from "./preview"
+import { Eye, Code } from "lucide-react"
 
 export default function AdminDashboardPage() {
+  const [showPreview, setShowPreview] = useState(false)
+
+  // Se preview estiver ativo, mostrar a versão nova
+  if (showPreview) {
+    return (
+      <div>
+        <div className="fixed top-4 right-4 z-50 flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowPreview(false)}
+            className="bg-white shadow-lg"
+          >
+            <Code className="h-4 w-4 mr-2" />
+            Voltar ao Original
+          </Button>
+        </div>
+        <AdminDashboardPreview />
+      </div>
+    )
+  }
+
+  // Versão original
   return (
     <div className="min-h-screen admin-gradient">
       <div className="p-8">
+        {/* Preview Toggle */}
+        <div className="fixed top-4 right-4 z-50">
+          <Button
+            onClick={() => setShowPreview(true)}
+            className="bg-[#322ca7] hover:bg-[#322ca7]/90 shadow-lg"
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            Ver Preview do Novo Design
+          </Button>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
-            <TasteFlowLogo size="small" className="text-white" />
+            <span className="text-white font-body text-lg">Dashboard Admin</span>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-white font-body">Janeiro 2024 - Dezembro 2025</span>
