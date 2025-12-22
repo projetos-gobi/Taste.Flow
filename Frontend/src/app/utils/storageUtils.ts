@@ -43,8 +43,15 @@ export function mustChangePassword(token: string | null): boolean {
 
   try {
     const decoded = jwtDecode<any>(token);
+    const value = decoded.mustchangepassword;
+    
+    console.log("[MUST CHANGE PASSWORD CHECK]", {
+      raw: value,
+      type: typeof value,
+      isTrue: value === true || value === "true" || value === "True",
+    });
 
-    return decoded.mustchangepassword === "True" || decoded.mustchangepassword === true;
+    return value === true || value === "true" || value === "True";
   } catch (e) {
     console.error("Erro ao verificar mustChangePassword:", e);
     return false;

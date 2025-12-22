@@ -136,6 +136,14 @@ export async function POST(req: NextRequest) {
 
       const user = userResult.rows[0];
 
+      // Log para debug
+      console.log("[LOGIN] User MustChangePassword from DB:", {
+        value: user.MustChangePassword,
+        type: typeof user.MustChangePassword,
+        isTrue: user.MustChangePassword === true,
+        isNull: user.MustChangePassword === null,
+      });
+
       // Validar senha (SHA256 + salt)
       const passwordHash = toSha256Hash(password, user.PasswordSalt);
       
