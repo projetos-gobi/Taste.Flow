@@ -40,10 +40,23 @@ export function ChangePasswordModal({ open }: ChangePasswordModalProps) {
       const response = await recoverPassword(request);
 
       if (response && response.success !== false) {
-        toast.success("Senha alterada com sucesso!");
+        toast.success("Senha alterada com sucesso! Por favor, faça login novamente com sua nova senha.");
         handleClose();
-        // Recarregar a página para atualizar o token e permitir acesso completo
-        window.location.reload();
+        
+        // Limpar token e cookies
+        Cookies.remove("token");
+        Cookies.remove("role");
+        
+        // Limpar session storage
+        if (typeof window !== "undefined") {
+          sessionStorage.clear();
+          localStorage.removeItem("session-storage");
+        }
+        
+        // Redirecionar para tela de login após 1 segundo
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1000);
       } else {
         toast.error(response?.message || "Não foi possível alterar a senha. Verifique os dados e tente novamente.");
       }
