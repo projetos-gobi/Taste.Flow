@@ -4,6 +4,16 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/src/components/ui/button"
 import { Filter, Plus, Edit, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, User2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/src/components/ui/alert-dialog"
 import { UserFilterModal } from "@/src/components/user-filter-modal"
 import { EditUserModal } from "@/src/components/edit-user-modal"
 import useSession from "@/src/hooks/useSession"
@@ -37,7 +47,9 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);  
+  const [isLoading, setIsLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const itemsPerPage = 10; 
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -81,25 +93,33 @@ export default function UsersPage() {
     router.push("/admin/usuarios/cadastrar")
   }
 
-  const handleDeleteUser = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir esta usuário?")) {
-      //setIsLoading(true)
-      session.setRefresh(false);
+  const handleDeleteClick = (id: string) => {
+    setUserToDelete(id);
+    setDeleteDialogOpen(true);
+  }
 
-      try {
-        const response = await softDeleteUser({ id: id});
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return;
 
-        if(response.updated){
-          toast.success("Usuário deletada com sucesso!");
-        }else{
-          toast.error("Falha ao deletar um usuário. Tente novamente.");
-        } 
-      } catch (error) {
-        console.error("Erro ao deletar um usuário:", error)
-      } finally {
-        session.setRefresh(true);
-        //setIsLoading(false)
+    session.setRefresh(false);
+    setIsLoading(true);
+
+    try {
+      const response = await softDeleteUser({ id: userToDelete });
+
+      if (response.deleted) {
+        toast.success("Usuário deletado com sucesso!");
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+      } else {
+        toast.error(response.message || "Falha ao deletar o usuário. Tente novamente.");
       }
+    } catch (error) {
+      console.error("Erro ao deletar um usuário:", error);
+      toast.error("Erro ao deletar o usuário. Tente novamente.");
+    } finally {
+      session.setRefresh(true);
+      setIsLoading(false);
     }
   }
 
@@ -177,8 +197,9 @@ export default function UsersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteUser(user.id)}
+                            onClick={() => handleDeleteClick(user.id)}
                             className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
+                            disabled={isLoading}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
