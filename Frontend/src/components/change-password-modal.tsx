@@ -40,7 +40,16 @@ export function ChangePasswordModal({ open }: ChangePasswordModalProps) {
       
       const response = await recoverPassword(request);
 
-      if (response && response.success !== false) {
+      console.log("[CHANGE PASSWORD MODAL] Response:", response);
+
+      // Verificar se a resposta indica sucesso (pode ser success: true ou recovered: true)
+      const isSuccess = response && (
+        response.success === true || 
+        response.recovered === true ||
+        (response.success !== false && response.recovered !== false)
+      );
+
+      if (isSuccess) {
         toast.success("Senha alterada com sucesso! Por favor, faça login novamente com sua nova senha.");
         handleClose();
         
@@ -59,7 +68,9 @@ export function ChangePasswordModal({ open }: ChangePasswordModalProps) {
           window.location.href = "/";
         }, 1000);
       } else {
-        toast.error(response?.message || "Não foi possível alterar a senha. Verifique os dados e tente novamente.");
+        const errorMessage = response?.message || response?.Message || "Não foi possível alterar a senha. Verifique os dados e tente novamente.";
+        console.error("[CHANGE PASSWORD MODAL] Error response:", response);
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Erro ao alterar a senha:", error);
