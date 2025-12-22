@@ -56,6 +56,7 @@ function getUserIdFromToken(authHeader: string | null): string | null {
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
+  console.log("[RECOVER PASSWORD] Starting...");
 
   try {
     const body = await req.json();
@@ -63,8 +64,16 @@ export async function POST(req: NextRequest) {
     const oldPassword = body.oldPassword || body.OldPassword || "";
     const newPassword = body.newPassword || body.NewPassword || "";
 
+    console.log("[RECOVER PASSWORD] Request received:", {
+      hasCode: !!code,
+      codeLength: code.length,
+      hasOldPassword: !!oldPassword,
+      hasNewPassword: !!newPassword,
+    });
+
     // Se code estiver vazio, permitir alteração apenas com senha antiga (para usuários novos sem código)
     if (!oldPassword || !newPassword) {
+      console.log("[RECOVER PASSWORD] Missing required fields");
       return NextResponse.json(
         {
           success: false,
@@ -76,12 +85,19 @@ export async function POST(req: NextRequest) {
 
     // Se não tiver código, validar apenas pela senha antiga (para novos usuários)
     const skipCodeValidation = !code || code === "";
+    console.log("[RECOVER PASSWORD] SkipCodeValidation:", skipCodeValidation);
 
     // Verificar autenticação via token
     const authHeader = req.headers.get("authorization");
     const userId = getUserIdFromToken(authHeader);
 
+    console.log("[RECOVER PASSWORD] Auth check:", {
+      hasAuthHeader: !!authHeader,
+      userId: userId,
+    });
+
     if (!userId) {
+      console.log("[RECOVER PASSWORD] Authentication failed");
       return NextResponse.json(
         {
           success: false,
@@ -99,16 +115,25 @@ export async function POST(req: NextRequest) {
 
       // Se tiver código, validar o token
       if (!skipCodeValidation) {
+        console.log("[RECOVER PASSWORD] Validating code:", code);
         const tokenResult = await client.query(
           `SELECT "Id", "UserId", "Code"
            FROM "UserPasswordManagement"
            WHERE "Code" = $1
+             AND COALESCE("IsActive", true) = true
+             AND NOT COALESCE("IsDeleted", false) = true
            ORDER BY "CreatedOn" DESC
            LIMIT 1`,
           [code]
         );
 
+        console.log("[RECOVER PASSWORD] Token query result:", {
+          found: tokenResult.rows.length > 0,
+          userId: tokenResult.rows[0]?.UserId,
+        });
+
         if (tokenResult.rows.length === 0) {
+          console.log("[RECOVER PASSWORD] Code not found");
           return NextResponse.json(
             {
               success: false,
@@ -122,6 +147,10 @@ export async function POST(req: NextRequest) {
 
         // Verificar se o token pertence ao usuário autenticado
         if (token.UserId !== userId) {
+          console.log("[RECOVER PASSWORD] Code belongs to different user:", {
+            tokenUserId: token.UserId,
+            authenticatedUserId: userId,
+          });
           return NextResponse.json(
             {
               success: false,
@@ -130,6 +159,9 @@ export async function POST(req: NextRequest) {
             { status: 403 }
           );
         }
+        console.log("[RECOVER PASSWORD] Code validated successfully");
+      } else {
+        console.log("[RECOVER PASSWORD] Skipping code validation (code is empty)");
       }
 
       // Buscar usuário
@@ -156,8 +188,17 @@ export async function POST(req: NextRequest) {
       const user = userResult.rows[0];
 
       // Validar senha antiga
+      console.log("[RECOVER PASSWORD] Validating old password...");
       const oldPasswordHash = toSha256Hash(oldPassword, user.PasswordSalt);
-      if (oldPasswordHash !== user.PasswordHash) {
+      const passwordMatch = oldPasswordHash === user.PasswordHash;
+      console.log("[RECOVER PASSWORD] Password validation:", {
+        match: passwordMatch,
+        oldHashPreview: oldPasswordHash.substring(0, 20) + "...",
+        storedHashPreview: user.PasswordHash.substring(0, 20) + "...",
+      });
+
+      if (!passwordMatch) {
+        console.log("[RECOVER PASSWORD] Old password mismatch");
         return NextResponse.json(
           {
             success: false,
