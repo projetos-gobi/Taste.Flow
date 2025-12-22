@@ -63,15 +63,19 @@ export async function POST(req: NextRequest) {
     const oldPassword = body.oldPassword || body.OldPassword || "";
     const newPassword = body.newPassword || body.NewPassword || "";
 
-    if (!code || !oldPassword || !newPassword) {
+    // Se code estiver vazio, permitir alteração apenas com senha antiga (para usuários novos sem código)
+    if (!oldPassword || !newPassword) {
       return NextResponse.json(
         {
           success: false,
-          message: "Código, senha antiga e nova senha são obrigatórios.",
+          message: "Senha antiga e nova senha são obrigatórias.",
         },
         { status: 400 }
       );
     }
+
+    // Se não tiver código, validar apenas pela senha antiga (para novos usuários)
+    const skipCodeValidation = !code || code === "";
 
     // Verificar autenticação via token
     const authHeader = req.headers.get("authorization");
@@ -91,37 +95,41 @@ export async function POST(req: NextRequest) {
     const client = await db.connect();
 
     try {
-      // Buscar token de redefinição de senha
-      const tokenResult = await client.query(
-        `SELECT "Id", "UserId", "Code"
-         FROM "UserPasswordManagement"
-         WHERE "Code" = $1
-         ORDER BY "CreatedOn" DESC
-         LIMIT 1`,
-        [code]
-      );
+      let token: any = null;
 
-      if (tokenResult.rows.length === 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Token de redefinição de senha inválido ou não encontrado.",
-          },
-          { status: 404 }
+      // Se tiver código, validar o token
+      if (!skipCodeValidation) {
+        const tokenResult = await client.query(
+          `SELECT "Id", "UserId", "Code"
+           FROM "UserPasswordManagement"
+           WHERE "Code" = $1
+           ORDER BY "CreatedOn" DESC
+           LIMIT 1`,
+          [code]
         );
-      }
 
-      const token = tokenResult.rows[0];
+        if (tokenResult.rows.length === 0) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Token de redefinição de senha inválido ou não encontrado.",
+            },
+            { status: 404 }
+          );
+        }
 
-      // Verificar se o token pertence ao usuário autenticado
-      if (token.UserId !== userId) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Token de redefinição de senha inválido.",
-          },
-          { status: 403 }
-        );
+        token = tokenResult.rows[0];
+
+        // Verificar se o token pertence ao usuário autenticado
+        if (token.UserId !== userId) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Token de redefinição de senha inválido.",
+            },
+            { status: 403 }
+          );
+        }
       }
 
       // Buscar usuário
@@ -176,13 +184,15 @@ export async function POST(req: NextRequest) {
         [newPasswordHash, newPasswordSalt, now, userId]
       );
 
-      // Marcar token como usado
-      await client.query(
-        `UPDATE "UserPasswordManagement"
-         SET "ModifiedOn" = $1
-         WHERE "Id" = $2`,
-        [now, token.Id]
-      );
+      // Marcar token como usado (se existir)
+      if (token && token.Id) {
+        await client.query(
+          `UPDATE "UserPasswordManagement"
+           SET "ModifiedOn" = $1
+           WHERE "Id" = $2`,
+          [now, token.Id]
+        );
+      }
 
       const elapsed = Date.now() - startTime;
 

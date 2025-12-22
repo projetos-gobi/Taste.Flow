@@ -332,6 +332,33 @@ export async function POST(req: NextRequest) {
           throw userError;
         }
 
+        // Criar UserPasswordManagement com código para alteração de senha (se MustChangePassword = true)
+        if (true) { // Sempre criar para novos usuários (MustChangePassword = true)
+          const passwordMgmtId = crypto.randomUUID();
+          const passwordCode = generateLicenseCode(10); // Código de 10 caracteres
+          
+          try {
+            await client.query(
+              `INSERT INTO "UserPasswordManagement"
+               ("Id", "UserId", "Code", "CreatedOn", "CreatedBy", "IsActive", "IsDeleted")
+               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              [
+                passwordMgmtId,
+                userId,
+                passwordCode,
+                now,
+                systemUserId,
+                true,
+                false,
+              ]
+            );
+            console.log(`[CREATE USERS] UserPasswordManagement created for user ${i + 1} with code: ${passwordCode}`);
+          } catch (pwdMgmtError: any) {
+            console.error(`[CREATE USERS] Error creating UserPasswordManagement for user ${i + 1}:`, pwdMgmtError);
+            // Não falhar a criação do usuário se o UserPasswordManagement falhar
+          }
+        }
+
         createdUserIds.push(userId);
 
         // Enviar e-mail com senha temporária (fire-and-forget para não bloquear a criação)
