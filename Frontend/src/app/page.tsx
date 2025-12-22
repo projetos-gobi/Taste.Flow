@@ -58,13 +58,15 @@ export default function LoginPage() {
       if(response.token && response.authenticationStatus === "Success"){
         api.defaults.headers.Authorization = `Bearer ${response.token}`;
 
+        // Salvar token mesmo se precisar mudar senha (para autenticação no recoverpassword)
+        Cookies.set("token", response.token);
+        api.defaults.headers.Authorization = `Bearer ${response.token}`;
+
         if (mustChangePassword(response.token)) {
           var token = decodeToken(response.token);
           changePasswordModal.openModal(true, token.changepasswordcode);
           return;
         }
-
-        Cookies.set("token", response.token);
         Cookies.set("role", response.role);
 
         session.setEmail(response.email); 
