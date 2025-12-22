@@ -10,6 +10,7 @@ export const createProductIntermediate = async (data: ICreateProductIntermediate
 export const getProductIntermediatesPaged = async (data: IGetProductIntermediatesPagedRequest) => {
     const response = await api.post("/api/ProductIntermediate/get-product-intermediates-paged", { ...data });
 
+    // O endpoint Next.js retorna { success: true, data: { count, items, page, pageSize } }
     return response.data.data;
 }
 

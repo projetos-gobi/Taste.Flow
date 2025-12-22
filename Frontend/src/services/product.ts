@@ -10,6 +10,7 @@ export const createProduct = async (data: ICreateProductRequest) => {
 export const getProductsPaged = async (data: IGetProductsPagedRequest) => {
     const response = await api.post("/api/Product/get-products-paged", { ...data });
 
+    // O endpoint Next.js retorna { success: true, data: { count, items, page, pageSize } }
     return response.data.data;
 }
 
