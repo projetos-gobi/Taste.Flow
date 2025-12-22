@@ -15,7 +15,10 @@ import {
   Calendar,
   Download,
   Filter,
-  MoreVertical
+  MoreVertical,
+  Crown,
+  Star,
+  Box
 } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Tooltip, Legend } from "recharts"
 import Link from "next/link"
@@ -80,9 +83,9 @@ const monthlyRevenue = [
 ]
 
 const planDistribution = [
-  { name: "Premium", value: 52, color: "#8b5cf6", icon: "👑" },
-  { name: "Completo", value: 28, color: "#3b82f6", icon: "⭐" },
-  { name: "Básico", value: 20, color: "#10b981", icon: "📦" },
+  { name: "Premium", value: 52, color: "#8b5cf6", icon: Crown },
+  { name: "Completo", value: 28, color: "#3b82f6", icon: Star },
+  { name: "Básico", value: 20, color: "#10b981", icon: Box },
 ]
 
 const recentActivity = [
