@@ -70,10 +70,13 @@ function getEmailTransporter() {
   return nodemailer.createTransport({
     host: smtpServer,
     port: smtpPort,
-    secure: smtpPort === 465,
+    secure: smtpPort === 465, // true para SSL na porta 465
     auth: {
       user: smtpUsername,
       pass: smtpPassword,
+    },
+    tls: {
+      rejectUnauthorized: false, // Aceitar certificados auto-assinados
     },
   });
 }
