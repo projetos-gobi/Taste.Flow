@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/src/components/ui/button"
 import { TasteFlowLogo } from "@/src/components/tasteflow-logo"
-import { Home, Users, Building2, LogOut, ChevronLeft, ChevronRight } from "lucide-react"
+import { Home, Users, Building2, LogOut, Menu, X } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import useSession from "../hooks/useSession"
@@ -56,11 +56,26 @@ export function AdminSidebar() {
     >
       {/* Header with Logo */}
       <div className="p-6 border-b border-white/20">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 flex-shrink-0">
-            <img src="/images/tasteflow-icon.svg" alt="TasteFlow" className="w-full h-auto" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-8 h-8 flex-shrink-0">
+              <img src="/images/tasteflow-icon.svg" alt="TasteFlow" className="w-full h-auto" />
+            </div>
+            {!isCollapsed && <span className="font-bebas text-white text-xl tracking-wider">TASTEFLOW</span>}
           </div>
-          {!isCollapsed && <span className="font-bebas text-white text-xl tracking-wider">TASTEFLOW</span>}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="text-white hover:bg-white/10 p-2 h-8 w-8 flex-shrink-0"
+            title={isCollapsed ? "Expandir menu" : "Colapsar menu"}
+          >
+            {isCollapsed ? (
+              <Menu className="h-5 w-5" />
+            ) : (
+              <X className="h-5 w-5" />
+            )}
+          </Button>
         </div>
       </div>
 
