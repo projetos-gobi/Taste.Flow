@@ -67,6 +67,8 @@ function getEmailTransporter() {
   const smtpFromName = process.env.SMTP_FROM_NAME || "TasteFlow";
   const smtpFromEmail = process.env.SMTP_FROM_EMAIL || "tasteflow@modest-bhabha.65-181-111-22.plesk.page";
 
+  console.log(`[SMTP CONFIG] Server: ${smtpServer}, Port: ${smtpPort}, Username: ${smtpUsername}, From: ${smtpFromEmail}`);
+
   return nodemailer.createTransport({
     host: smtpServer,
     port: smtpPort,
@@ -78,6 +80,8 @@ function getEmailTransporter() {
     tls: {
       rejectUnauthorized: false, // Aceitar certificados auto-assinados
     },
+    debug: true, // Habilitar debug
+    logger: true, // Logar no console
   });
 }
 
