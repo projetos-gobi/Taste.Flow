@@ -68,18 +68,18 @@ const metrics = [
 ]
 
 const monthlyRevenue = [
-  { month: "Jan", receita: 45000, despesas: 32000, lucro: 13000 },
-  { month: "Fev", receita: 52000, despesas: 35000, lucro: 17000 },
-  { month: "Mar", receita: 48000, despesas: 33000, lucro: 15000 },
-  { month: "Abr", receita: 61000, despesas: 38000, lucro: 23000 },
-  { month: "Mai", receita: 55000, despesas: 36000, lucro: 19000 },
-  { month: "Jun", receita: 67000, despesas: 40000, lucro: 27000 },
-  { month: "Jul", receita: 58000, despesas: 37000, lucro: 21000 },
-  { month: "Ago", receita: 72000, despesas: 42000, lucro: 30000 },
-  { month: "Set", receita: 65000, despesas: 39000, lucro: 26000 },
-  { month: "Out", receita: 78000, despesas: 45000, lucro: 33000 },
-  { month: "Nov", receita: 71000, despesas: 43000, lucro: 28000 },
-  { month: "Dez", receita: 85000, despesas: 48000, lucro: 37000 },
+  { month: "Jan", faturamento: 45000 },
+  { month: "Fev", faturamento: 52000 },
+  { month: "Mar", faturamento: 48000 },
+  { month: "Abr", faturamento: 61000 },
+  { month: "Mai", faturamento: 55000 },
+  { month: "Jun", faturamento: 67000 },
+  { month: "Jul", faturamento: 58000 },
+  { month: "Ago", faturamento: 72000 },
+  { month: "Set", faturamento: 65000 },
+  { month: "Out", faturamento: 78000 },
+  { month: "Nov", faturamento: 71000 },
+  { month: "Dez", faturamento: 85000 },
 ]
 
 const planDistribution = [
@@ -187,7 +187,7 @@ export default function AdminDashboardPreview() {
           <Card className="lg:col-span-2 border-0 shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between pb-4">
               <CardTitle className="text-lg font-semibold text-gray-900 font-heading">
-                Receita e Despesas
+                Faturamento Mensal
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" className="text-xs">
@@ -224,30 +224,14 @@ export default function AdminDashboardPreview() {
                       }}
                       formatter={(value: any) => `R$ ${value.toLocaleString('pt-BR')}`}
                     />
-                    <Legend />
                     <Line 
                       type="monotone" 
-                      dataKey="receita" 
+                      dataKey="faturamento" 
                       stroke="#3b82f6" 
                       strokeWidth={3}
-                      dot={{ fill: '#3b82f6', r: 4 }}
-                      name="Receita"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="despesas" 
-                      stroke="#ef4444" 
-                      strokeWidth={3}
-                      dot={{ fill: '#ef4444', r: 4 }}
-                      name="Despesas"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="lucro" 
-                      stroke="#10b981" 
-                      strokeWidth={3}
-                      dot={{ fill: '#10b981', r: 4 }}
-                      name="Lucro"
+                      dot={{ fill: '#3b82f6', r: 5 }}
+                      activeDot={{ r: 7 }}
+                      name="Faturamento"
                     />
                   </LineChart>
                 </ResponsiveContainer>
