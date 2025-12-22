@@ -287,21 +287,26 @@ export default function AdminDashboardPreview() {
                 </div>
               </div>
               <div className="space-y-3">
-                {planDistribution.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{item.icon}</span>
-                      <div>
-                        <p className="font-medium text-gray-900 font-body">{item.name}</p>
-                        <p className="text-xs text-gray-500 font-body">{item.value}% dos usuários</p>
+                {planDistribution.map((item, index) => {
+                  const Icon = item.icon
+                  return (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg" style={{ backgroundColor: `${item.color}15` }}>
+                          <Icon className="h-5 w-5" style={{ color: item.color }} />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 font-body">{item.name}</p>
+                          <p className="text-xs text-gray-500 font-body">{item.value}% dos usuários</p>
+                        </div>
                       </div>
+                      <div 
+                        className="w-4 h-4 rounded-full"
+                        style={{ backgroundColor: item.color }}
+                      />
                     </div>
-                    <div 
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: item.color }}
-                    />
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
