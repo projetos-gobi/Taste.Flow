@@ -62,6 +62,14 @@ function generateToken(user: {
   const audience = process.env.JWT_AUDIENCE || "TasteFlowClient";
   const expiryMinutes = parseInt(process.env.JWT_EXPIRY_MINUTES || "60", 10);
 
+  // Garantir que mustChangePassword seja boolean normalizado
+  const mustChangePwd = user.mustChangePassword === true || user.mustChangePassword === "true" || user.mustChangePassword === "True";
+  console.log("[GENERATE TOKEN] MustChangePassword:", {
+    raw: user.mustChangePassword,
+    type: typeof user.mustChangePassword,
+    normalized: mustChangePwd,
+  });
+
   const claims = {
     sub: user.accessProfileId,
     userid: user.id,
@@ -71,7 +79,7 @@ function generateToken(user: {
     enterpriseId: user.enterpriseId || "",
     name: user.name,
     email: user.email,
-    mustchangepassword: user.mustChangePassword.toString(),
+    mustchangepassword: mustChangePwd.toString(),
     changepasswordcode: user.changePasswordCode || "",
   };
 
