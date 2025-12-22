@@ -211,12 +211,17 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      console.log("[RECOVER PASSWORD] Old password validated successfully");
+
       // Gerar novo salt e hash para a nova senha
+      console.log("[RECOVER PASSWORD] Generating new password hash...");
       const newPasswordSalt = crypto.randomUUID();
       const newPasswordHash = toSha256Hash(newPassword, newPasswordSalt);
+      console.log("[RECOVER PASSWORD] New password hash generated");
 
       // Atualizar senha e desabilitar MustChangePassword
       const now = new Date().toISOString();
+      console.log("[RECOVER PASSWORD] Updating user password in database...");
       const updateResult = await client.query(
         `UPDATE "Users"
          SET 
@@ -227,18 +232,24 @@ export async function POST(req: NextRequest) {
          WHERE "Id" = $4`,
         [newPasswordHash, newPasswordSalt, now, userId]
       );
+      console.log("[RECOVER PASSWORD] User password updated:", {
+        rowsAffected: updateResult.rowCount,
+      });
 
       // Marcar token como usado (se existir)
       if (token && token.Id) {
+        console.log("[RECOVER PASSWORD] Marking token as used...");
         await client.query(
           `UPDATE "UserPasswordManagement"
            SET "ModifiedOn" = $1
            WHERE "Id" = $2`,
           [now, token.Id]
         );
+        console.log("[RECOVER PASSWORD] Token marked as used");
       }
 
       const elapsed = Date.now() - startTime;
+      console.log("[RECOVER PASSWORD] Success! Password changed successfully. Elapsed:", elapsed, "ms");
 
       return NextResponse.json(
         {
