@@ -39,11 +39,13 @@ export function ChangePasswordModal({ open }: ChangePasswordModalProps) {
       
       const response = await recoverPassword(request);
 
-      if (response) {
+      if (response && response.success !== false) {
         toast.success("Senha alterada com sucesso!");
         handleClose();
+        // Recarregar a página para atualizar o token e permitir acesso completo
+        window.location.reload();
       } else {
-        toast.error("Não foi possível alterar a senha. Verifique os dados e tente novamente.");
+        toast.error(response?.message || "Não foi possível alterar a senha. Verifique os dados e tente novamente.");
       }
     } catch (error) {
       console.error("Erro ao alterar a senha:", error);
