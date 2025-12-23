@@ -62,7 +62,7 @@ export function AdminSidebar() {
             e.stopPropagation();
             setIsCollapsed(false);
           }}
-          className="fixed left-[72px] top-6 z-50 text-gray-700 bg-gray-200 hover:bg-gray-300 border-2 border-gray-300 rounded-md p-2 h-8 w-8 shadow-md transition-all duration-300"
+          className="fixed left-[80px] top-8 z-50 text-gray-700 bg-gray-200 hover:bg-gray-300 border-2 border-gray-300 rounded-md p-2 h-8 w-8 shadow-md transition-all duration-300"
           title="Expandir menu"
         >
           <Menu className="h-5 w-5" />
