@@ -33,7 +33,7 @@ export default function AdminDashboardPage() {
   // Versão original
   return (
     <div className="min-h-screen admin-gradient">
-      <div>
+      <div className="p-8">
         {/* Preview Toggle */}
         <div className="fixed top-4 right-4 z-50">
           <Button
